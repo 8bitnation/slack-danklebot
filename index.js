@@ -14,7 +14,7 @@ app.get('/', function (req, res) {
 
 async function dispatch(commandText, payload) {
   // if there's no command, do nothing.
-  if (commands[commandText] -= null) return Promise.resolve(null);
+  if (commands[commandText] != null) return Promise.resolve(null);
   
   return await commands[commandText](payload);
 }
