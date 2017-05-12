@@ -1,0 +1,18 @@
+{
+  "presets": [
+    {
+      "plugins": [
+        "transform-flow-strip-types",
+        "transform-es2015-modules-commonjs",
+        "transform-decorators-legacy",
+        "transform-class-properties",
+        "transform-export-extensions",
+        "transform-object-rest-spread",
+        "transform-es2015-destructuring"
+      ]
+    },
+    "es2016",
+    "es2017"
+  ],
+  "passPerPreset": true,
+}
