@@ -19,20 +19,13 @@ export async function handler(payload) {
   if(!member.length) {
       return({
         "response_type": "ephemeral",
-        text: "Sorry, Bungie did not know anything about `" + name + "`"
+        text: util.format("Sorry, Bungie did not know anything about `%s`", name)
       });
   }
 
   // loop around each member
   for(let m = 0; m < member.length; m++) {
-      let a = {
-          color: "#a6364f",
-          author_icon: 'https://www.bungie.net'+member[m].iconPath,
-          author_name: member[m].displayName
-      }; // new attachment
-
-      msg.attachments = [...msg.attachments, a, ...await memberSummary(member[m])];
-
+      msg.attachments = [...msg.attachments, ...await memberSummary(member[m])];
   }
   return msg;
 }
@@ -41,7 +34,16 @@ async function memberSummary(member) {
   const r = await bungie.accountSummary(member.membershipType, member.membershipId);
   const chars = r.data.characters;
 
-  const response = [];
+  const response = [{
+    color: "#a6364f",
+    author_icon: 'https://www.bungie.net'+member.iconPath,
+    author_name: member.displayName,
+    fields: [ {
+      title: "Grimoire",
+      value: r.data.grimoireScore
+    }]
+  }];
+
   //
   for(let c = 0; c < chars.length; c++) {
     let guardian = chars[c];
@@ -52,18 +54,32 @@ async function memberSummary(member) {
       "mrkdwn_in": [ "text", "title" ]
     };
 
-    a.text = util.format("*━━━ %s %s %s ",
+    a.title = util.format("%s %s %s",
       r.definitions.genders[guardian.characterBase.genderHash].genderName,
       r.definitions.races[guardian.characterBase.raceHash].raceName,
       r.definitions.classes[guardian.characterBase.classHash].className
     );
-    a.text += "━".repeat(40 - a.text.length) + "*";
+    //a.text = util.format("`%s %s`", a.text, "━".repeat(40 - a.text.length));
 
     a.fields.push({ title: "Level", value: guardian.characterLevel, short: true });
     a.fields.push({ title: "Light", value: guardian.characterBase.powerLevel, short: true });
     a.fields.push({ title: "Hours Played", value: Math.round( guardian.characterBase.minutesPlayedTotal / 6) / 10, short: true });
 
+    if(guardian.characterBase.currentActivityHash) {
+      let act = r.definitions.activities[guardian.characterBase.currentActivityHash];
+      let dest = r.definitions.destinations[act.destinationHash];
+      let type = r.definitions.activityTypes[act.activityTypeHash];
+      //a.footer = util.format("%s / %s / %s", act.activityName, dest.destinationName, type.activityTypeName);
+      //a.footer_icon = 'https://www.bungie.net'+dest.icon;
+      a.fields.push({
+        title: "Activity",
+        value: util.format("%s / %s / %s", act.activityName, dest.destinationName, type.activityTypeName),
+        short: true
+      });
+    }
+
     response.push(a);
+
   }
   return response;
 }

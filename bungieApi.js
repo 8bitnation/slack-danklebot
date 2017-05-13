@@ -45,7 +45,17 @@ export
 function accountSummary(
   membershipType, destinyMembershipId
 ) {
-  const path = `/${membershipType}/Account/${destinyMembershipId}/Summary/`;
+  const path = `/${membershipType}/Account/${destinyMembershipId}/Summary`;
   return makeGETRequest(path, { definitions: true });
 }
+
+export
+function accountStats(
+  membershipType, destinyMembershipId
+) {
+  const path = `/Stats/Account/${membershipType}/${destinyMembershipId}`;
+  return makeGETRequest(path);
+}
+
+
 	

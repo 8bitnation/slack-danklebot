@@ -3,9 +3,9 @@ import * as summary from './summary';
 import * as stats from './stats';
 
 const commands = {
-  [summary.command]: summary.handler,
   [exampleCommand.command]: exampleCommand.handler,
-  [stats.command]: summary.handler,
+  [summary.command]: summary.handler,
+  [stats.command]: stats.handler,
 };
 
 export default commands;
