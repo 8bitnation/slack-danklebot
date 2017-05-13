@@ -4,14 +4,16 @@ import queryString from 'query-string';
 
 import config from './config';
 
-const BASE_URL = 'http://www.bungie.net';
+const BASE_URL = 'https://www.bungie.net/Platform/Destiny';
 
 export
-function makeGETRequest(path: string, params: ?Object) {
+async function makeGETRequest(path: string, params: ?Object) {
   let paramString = '';
   if (params != null) {
     paramString = `?${queryString.stringify(params)}`;
   }
+
+  console.log("issuing bungie API call: %s%s/%s",BASE_URL, path, paramString);
 
   const response = await fetch(`${BASE_URL}${path}/${paramString}`, {
     credentials: 'include',
@@ -19,11 +21,13 @@ function makeGETRequest(path: string, params: ?Object) {
       'x-api-key': config.bungieApiToken,
       'Accept': 'application/json',
     }
-  })
+  });
+
+  console.log("response code", response.status);
 
   const json = await response.json();
 
-  return { response, json, Response: json.Response };
+  return json.Response;
 }
 
 type MembershipType = '1' | '2';
@@ -34,5 +38,14 @@ function getPlayerID(
   displayName: string,
 ) {
   const path = `/SearchDestinyPlayer/${membershipType}/${displayName}`;
-  const makeGETRequest(path)
+  return makeGETRequest(path);
 }
+
+export
+function accountSummary(
+  membershipType, destinyMembershipId
+) {
+  const path = `/${membershipType}/Account/${destinyMembershipId}/Summary/`;
+  return makeGETRequest(path, { definitions: true });
+}
+	

@@ -15,4 +15,6 @@
     "es2017"
   ],
   "passPerPreset": true,
+  "sourceMaps": true,
+  "retainLines": true
 }

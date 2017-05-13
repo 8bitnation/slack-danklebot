@@ -2,6 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import config from './config';
 import commands from './commands';
+import fetch from 'isomorphic-fetch';
 
 const app = express();
 
@@ -14,7 +15,7 @@ app.get('/', function (req, res) {
 
 async function dispatch(commandText, payload) {
   // if there's no command, do nothing.
-  if (commands[commandText] != null) return Promise.resolve(null);
+  if (!commands[commandText]) return null;
   
   return await commands[commandText](payload);
 }
@@ -33,7 +34,7 @@ async function dispatch(commandText, payload) {
 */
 
 app.post('/command', async function (req, res) {
-  res.end(''); // Don't leave slack hangin'
+  res.end(); // Don't leave slack hangin'
   
   const {
     channel_name,
@@ -43,22 +44,44 @@ app.post('/command', async function (req, res) {
     command,
     text,
     response_url,
+    token
   } = (req.body || {});
+  console.log(req.body);
+  try {
   
-  const response = await dispatch(command, {
-    text,
-    user_id,
-    user_name,
-    command,
-    text,
-    channel_id,
-    channel_name
-  });
+    const response = await dispatch(command, {
+      text,
+      user_id,
+      user_name,
+      command,
+      channel_id,
+      channel_name
+    });
   
-  // TODO: post response back to slack api.
+    if(response) {
+      // TODO: post response back to slack api.
+      console.log("sending response to: ", response_url);
+
+      const result = await fetch(response_url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(response)
+      });
+      if(result.status !== 200) {
+        console.error(result);
+      }
+      
+    }
+
+  } catch(err) {
+    console.error(err);
+  }
+
   
-})
+});
 
 app.listen(config.port, function () {
   console.log(`SlackBot8bn listening on port ${config.port}`)
-})
+});
