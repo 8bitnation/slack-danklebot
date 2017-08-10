@@ -1,5 +1,11 @@
-import * as bungie from '../bungieApi';
-import * as util from 'util';
+import * as bungie from '../lib/bungie';
+import { flatten, compact } from 'lodash';
+
+const classColour = [
+    '#B25F00', // titan
+    '#634438', // hunter
+    '#1F3330' // warlock
+    ];
 
 export const command = '/summary';
 export async function handler(payload) {
@@ -7,26 +13,26 @@ export async function handler(payload) {
 
   const name = payload.text.length ? payload.text : payload.user_name;
   const msg = {
-      "response_type": "ephemeral",
+      "response_type": "in_channel",
       attachments: []
   };
 
-  const member = [
-      ...await bungie.getPlayerID(1, name),
-      ...await bungie.getPlayerID(2, name)
-  ];
+  const member = flatten(compact(await Promise.all([
+    bungie.getPlayerID(1, name),
+    bungie.getPlayerID(2, name),
+  ])));
 
   if(!member.length) {
       return({
         "response_type": "ephemeral",
-        text: util.format("Sorry, Bungie did not know anything about `%s`", name)
+        text: `Sorry, Bungie did not know anything about \`${name}\``
       });
   }
 
   // loop around each member
-  for(let m = 0; m < member.length; m++) {
-      msg.attachments = [...msg.attachments, ...await memberSummary(member[m])];
-  }
+  msg.attachments = flatten(
+    await Promise.all(member.map(memberSummary))
+  );
   return msg;
 }
 
@@ -38,32 +44,29 @@ async function memberSummary(member) {
     color: "#a6364f",
     author_icon: 'https://www.bungie.net'+member.iconPath,
     author_name: member.displayName,
-    fields: [ {
-      title: "Grimoire",
-      value: r.data.grimoireScore
-    }]
+    "mrkdwn_in": [ "text" ],
+    text: `*Grimoire:* ${r.data.grimoireScore}`
   }];
 
   //
   for(let c = 0; c < chars.length; c++) {
     let guardian = chars[c];
+    let text = [];
     let a = {
       thumb_url: 'https://www.bungie.net'+guardian.emblemPath,
-      fields: [],
-      color: "#36a64f",
-      "mrkdwn_in": [ "text", "title" ]
+      color: classColour[guardian.characterBase.classType],
+      "mrkdwn_in": [ "text" ]
     };
 
-    a.title = util.format("%s %s %s",
-      r.definitions.genders[guardian.characterBase.genderHash].genderName,
-      r.definitions.races[guardian.characterBase.raceHash].raceName,
-      r.definitions.classes[guardian.characterBase.classHash].className
-    );
-    //a.text = util.format("`%s %s`", a.text, "━".repeat(40 - a.text.length));
+    a.title = 
+      r.definitions.genders[guardian.characterBase.genderHash].genderName + " " +
+      r.definitions.races[guardian.characterBase.raceHash].raceName + " " +
+      r.definitions.classes[guardian.characterBase.classHash].className + " ";
 
-    a.fields.push({ title: "Level", value: guardian.characterLevel, short: true });
-    a.fields.push({ title: "Light", value: guardian.characterBase.powerLevel, short: true });
-    a.fields.push({ title: "Hours Played", value: Math.round( guardian.characterBase.minutesPlayedTotal / 6) / 10, short: true });
+    //a.text = util.format("`%s %s`", a.text, "━".repeat(40 - a.text.length));
+    text.push(`       Level: ${guardian.characterLevel}`);
+    text.push(`       Light: ${guardian.characterBase.powerLevel}`);
+    text.push(`Hours Played: ${Math.round( guardian.characterBase.minutesPlayedTotal / 6) / 10}`);
 
     if(guardian.characterBase.currentActivityHash) {
       let act = r.definitions.activities[guardian.characterBase.currentActivityHash];
@@ -71,17 +74,12 @@ async function memberSummary(member) {
       let type = r.definitions.activityTypes[act.activityTypeHash];
       //a.footer = util.format("%s / %s / %s", act.activityName, dest.destinationName, type.activityTypeName);
       //a.footer_icon = 'https://www.bungie.net'+dest.icon;
-      a.fields.push({
-        title: "Activity",
-        value: util.format("%s / %s / %s", act.activityName, dest.destinationName, type.activityTypeName),
-        short: true
-      });
+      text.push(`    Activity: ${type.activityTypeName} / ${act.activityName} / ${dest.destinationName}`);
     }
+    a.text = `\`\`\`${text.join("\n")}\`\`\``;
 
     response.push(a);
 
   }
   return response;
 }
-
-

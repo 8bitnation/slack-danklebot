@@ -1,5 +1,5 @@
-import * as bungie from '../bungieApi';
-import * as util from 'util';
+import * as bungie from '../lib/bungie';
+import { flatten, compact } from 'lodash';
 
 export const command = '/stats';
 export async function handler(payload) {
@@ -11,22 +11,22 @@ export async function handler(payload) {
     attachments: []
   };
 
-  const member = [
-    ...await bungie.getPlayerID(1, name),
-    ...await bungie.getPlayerID(2, name)
-  ];
+  const member = flatten(compact(await Promise.all([
+    bungie.getPlayerID(1, name),
+    bungie.getPlayerID(2, name),
+  ])));
 
   if(!member.length) {
     return({
       "response_type": "ephemeral",
-      text: util.format("Sorry, Bungie did not know anything about `%s`", name)
+      text: `Sorry, Bungie did not know anything about \`${name}\``
     });
   }
 
   // loop around each member
-  for(let m = 0; m < member.length; m++) {
-    msg.attachments = [...msg.attachments, ...await memberStats(member[m])];
-  }
+  msg.attachments = flatten(
+    await Promise.all(member.map(memberStats))
+  );
   return msg;
 }
 
