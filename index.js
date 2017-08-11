@@ -1,17 +1,37 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import config from './config';
-import commands from './commands';
+import {commands, routers} from './commands';
+import * as db from './lib/db'
 import fetch from 'isomorphic-fetch';
+import { forOwn } from 'lodash';
+
+import * as logger from 'winston';
+logger.level = 'debug';
+// fudge - by default winston disables timestamps on the console
+logger.remove(logger.transports.Console);
+logger.add(logger.transports.Console, { prettyPrint: true, 'timestamp':true });
+
+logger.info('Starting bot');
 
 const app = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded());
-
-app.get('/', function (req, res) {
-  res.end('beef');
+app.set('view engine', 'hbs');
+app.use(function(req, res, next) {
+  logger.info(`<<< ${req.method} ${req.originalUrl}`);
+  next();
+  logger.info(`>>> ${req.method} ${req.originalUrl} ${res.statusCode}`);
 });
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// add all the sub routers defined in commands
+forOwn(routers, function(v, k) {
+  logger.info(`adding router for: ${k}`);
+  app.use(k, v);
+});
+
 
 async function dispatch(commandText, payload) {
   // if there's no command, do nothing.
@@ -46,7 +66,7 @@ app.post('/command', async function (req, res) {
     response_url,
     token
   } = (req.body || {});
-  console.log(req.body);
+  logger.info(req.body);
   try {
   
     const response = await dispatch(command, {
@@ -60,7 +80,7 @@ app.post('/command', async function (req, res) {
   
     if(response) {
       // TODO: post response back to slack api.
-      console.log("sending response to: ", response_url);
+      info(`sending response to: ${response_url}`);
 
       const result = await fetch(response_url, {
         method: 'POST',
@@ -70,18 +90,25 @@ app.post('/command', async function (req, res) {
         body: JSON.stringify(response)
       });
       if(result.status !== 200) {
-        console.error(result);
+        logger.error(result);
       }
       
     }
 
   } catch(err) {
-    console.error(err);
+    logger.error(err);
   }
 
   
 });
 
-app.listen(config.port, function () {
-  console.log(`SlackBot8bn listening on port ${config.port}`)
-});
+(async function init() {
+  await db.init();
+
+  const events = await db.team.events.find();
+
+  app.listen(config.port, function () {
+    logger.info(`SlackBot8bn listening on port ${config.port}`)
+  });
+})();
+
