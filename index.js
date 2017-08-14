@@ -7,16 +7,16 @@ import fetch from 'isomorphic-fetch';
 import { forOwn } from 'lodash';
 
 import * as logger from 'winston';
-logger.level = 'debug';
 // fudge - by default winston disables timestamps on the console
 logger.remove(logger.transports.Console);
-logger.add(logger.transports.Console, { prettyPrint: true, 'timestamp':true });
+logger.add(logger.transports.Console, { prettyPrint: true, 'timestamp':true, level: 'debug' });
 
 logger.info('Starting bot');
 
 const app = express();
 
 app.set('view engine', 'hbs');
+app.use(express.static('public'))
 app.use(function(req, res, next) {
   logger.info(`<<< ${req.method} ${req.originalUrl}`);
   next();
@@ -75,12 +75,13 @@ app.post('/command', async function (req, res) {
       user_name,
       command,
       channel_id,
-      channel_name
+      channel_name,
+      req
     });
   
     if(response) {
       // TODO: post response back to slack api.
-      info(`sending response to: ${response_url}`);
+      logger.info(`sending response to: ${response_url}`);
 
       const result = await fetch(response_url, {
         method: 'POST',

@@ -8,6 +8,7 @@ export const commands = {
   [exampleCommand.command]: exampleCommand.handler,
   [summary.command]: summary.handler,
   [stats.command]: stats.handler,
+  [team.command]: team.handler
 };
 
 export const routers = {

@@ -12,7 +12,6 @@ router.get('/', async function (req, res) {
 
   res.end(JSON.stringify({
     env: process.env,
-    config: config,
     routes: req.app._router.stack.map(function(middleware){
         return {
             'type': middleware.name,

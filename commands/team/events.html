@@ -1,0 +1,84 @@
+<html>
+<head>
+    <script src="https://unpkg.com/vue"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css">
+    <link rel="stylesheet" href="events.css">
+
+
+    <script type="text/x-template" id="participant-item-template">
+        <div class="participant">{{ getUserName(participant) }}
+        <div class="leave" v-if="canLeave(participant)">[leave]</div>
+        </div>
+    </script>
+
+    <script type="text/x-template" id="event-item-template">
+    <div>
+        <div class="event">
+            <div class="event-name" v-on:click="toggleVisible">
+            {{ event.name }} [ {{ event.participants.length }} ] / 
+            {{ event.date }}
+        </div>
+        <div v-if="event.visible">
+            <div class="participant-div">
+            Participants
+            <participant-item 
+                v-for="participant in event.participants"
+                v-bind:participant="participant"
+                v-bind:key="participant">
+            </participant-item>
+            <div v-if="canJoin(event)" 
+                    v-on:click="joinAsParticipant(event)"
+                    class="participant">+ join</div>
+            </div>
+            <div class="participant-div">
+                Alternates
+                <participant-item 
+                v-for="alternate in event.alternates"
+                v-bind:participant="alternate"
+                v-bind:key="alternate">
+                </participant-item>
+                <div v-if="canJoin(event)" 
+                        v-on:click="joinAsAlternate(event)" 
+                    class="participant">+ join</div>
+            </div>
+        </div>
+        </div>
+    </div>
+    </script>
+
+    <script type="text/x-template" id="channel-item-template">
+    <div>
+        <div class="channel" v-on:click="toggleVisible">
+            {{ channel.name }} [ {{ channel.events.length }} ]
+        </div>
+        <template v-if="channel.visible">
+        <event-item 
+            v-for="event in channel.events"
+            v-bind:event="event"
+            v-bind:key="event.id">
+            </event-item>
+            <div class="event">
+            <div class="event-name">
+                + create new event
+            </div>
+            </div>
+        </template>
+    </div>
+    </script>
+
+</head>
+<body>
+
+    <div class="title">8bn Events</div>
+
+    <div id="app">
+        <channel-item
+            v-for="channel in channels"
+            v-bind:channel="channel"
+            v-bind:key="channel.id">
+        </channel-item>
+    </div>
+    
+</body>
+<script src="events.js"></script>
+</html>
