@@ -4,5 +4,9 @@ export default {
   slackTeamID: process.env.SLACK_TEAM_ID,
   bungieApiToken: process.env.BUNGIE_API_TOKEN,
   slackApiToken: process.env.SLACK_API_TOKEN,
-  dbUrl: process.env.DB_URL
+  dbUrl: process.env.DB_URL,
+  teamChannels: [
+    'ps4-pve-general',
+    'ps4-pve-raids'
+  ]
 };

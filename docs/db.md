@@ -16,7 +16,6 @@
         channel: slack channel ID,
         name: event description/name,
         time: timestamp for event,
-        reserved: number of reserved spaces,
         participants: [
             ... array of slack IDs
         ],
