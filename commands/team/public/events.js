@@ -47,6 +47,11 @@ Vue.component('channel-item', {
 var app = new Vue({
   el: '#app',
   data: {
+    session: (function() {
+      // get the session cookie
+      var c = document.cookie.match(/8bn-team=([^;]+)/);
+      if(c && c.length > 1) return c[1];
+    } )(),
     owner: 'U8',
 		users: {
       'UR': '* reserved *',

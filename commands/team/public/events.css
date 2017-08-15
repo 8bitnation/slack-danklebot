@@ -1,0 +1,75 @@
+[v-cloak] {
+  display: none;
+}
+
+body {
+  font-family: monospace;
+}
+
+.title {
+  font-size: 30px;
+  text-align: center;
+}
+
+.leave {
+  float: right;
+}
+
+.channel {
+  font-size: 22px;
+  text-align: center;
+  color: white;
+  background-color: black;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 2px;
+}
+
+.event {
+  background-color: dimgray;
+  border-radius: 5px;
+  padding: 5px;
+  margin: 2px;
+}
+
+.event-name {
+  font-size: 20px;
+  color: white;
+  margin-bottom: 2px;
+  padding-bottom: 5px;
+}
+
+.event-detail {
+  font-size: 15px;
+  margin: 2px;
+  vertical-align: top;
+  width: 25%;
+  display: inline-block;
+  color: white;
+}
+
+.participant-div {
+  display: inline-block;
+  font-size: 16px;
+  color: lightgray;
+  border-radius: 5px;
+  width: 45%;
+  vertical-align: top;
+}
+
+.button {
+  background: white;
+  border: none;
+  float: right;
+  border-radius: 5px;
+}
+
+.participant {
+  font-size: 16px;
+  background-color: white;
+  color: black;
+  display: block;
+  border-radius: 3px;
+  margin: 2px;
+  padding: 2px;
+}

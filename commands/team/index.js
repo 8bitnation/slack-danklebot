@@ -11,16 +11,15 @@ import * as slack from '../../lib/slack';
  * 
  */
 export const router = express.Router();
+
 export const command = '/team';
 export async function handler(payload) {
 
     // create a new token for accessing the team page
     // and return the link to the user
 
-
-
     const token = await urlSafeToken(32);
-    const url = `http://${payload.req.headers.host}/team/${token}/events`
+    const url = `http://${payload.req.headers.host}/team/auth/${token}`
 
     await db.team.tokens.insertOne({
         user: payload.user_id,
@@ -36,45 +35,9 @@ export async function handler(payload) {
     
 }
 
-async function sendFile(res, file, type) {
-    return new Promise( (resolve, reject) => {
-        const fileName = path.join(__dirname, file);
-        const options = {
-            maxAge: 60000,
-            headers: { 'content-type': type }
-        };
-        res.sendFile(fileName, options, function (err) {
-            if (err) {
-              reject(err);
-            } else {
-              logger.debug('Sent:', fileName);
-              resolve();
-            }
-        });
-    });
-} 
+// authenticate session
+router.get('/auth/:token', async function(req, res) {
 
-// TODO: find a better way to server up the static files whilst keeping
-// them together with the template
-
-router.get('/:token/events.js', async function(req, res, next) {
-    try {
-        await sendFile(res, 'events.js', 'application/javascript');
-    } catch(err) {
-        logger.error(err)
-    }
-});
-
-router.get('/:token/events.css', async function(req, res, next) {
-    try {
-        await sendFile(res, 'events.css', 'application/javascript');
-    } catch(err) {
-        logger.error(err)
-    }
-});
-
-
-router.get('/:token/events', async function(req, res) {
     try {
         const token = await db.team.tokens.findOne({token : req.params.token});
         /*
@@ -83,10 +46,15 @@ router.get('/:token/events', async function(req, res) {
             return res.status(410).send('Token Expired');
         }
         */
-        await sendFile(res, 'events.html', 'text/html');
+        res.cookie('8bn-team', req.params.token);
+        res.redirect('..');
 
     } catch(err) {
         logger.error(err);
         res.status(500).send('Ouch!');
     }
+    
 });
+
+//serve up static files
+router.use('/', express.static(path.join(__dirname, 'public')));

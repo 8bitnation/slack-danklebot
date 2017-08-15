@@ -5,6 +5,7 @@ import {commands, routers} from './commands';
 import * as db from './lib/db'
 import fetch from 'isomorphic-fetch';
 import { forOwn } from 'lodash';
+import cookieParser from 'cookie-parser';
 
 import * as logger from 'winston';
 // fudge - by default winston disables timestamps on the console
@@ -15,8 +16,10 @@ logger.info('Starting bot');
 
 const app = express();
 
-app.set('view engine', 'hbs');
 app.use(express.static('public'))
+app.use(cookieParser());
+
+// simple express logger
 app.use(function(req, res, next) {
   logger.info(`<<< ${req.method} ${req.originalUrl}`);
   next();
