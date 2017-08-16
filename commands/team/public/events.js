@@ -1,12 +1,40 @@
+// setup the axios default
+
+axios.defaults.baseURL = document.location.href;
+axios.defaults.headers.common['Authorization'] = (function() {
+  // get the session cookie
+  // should already be URL safe
+  var c = document.cookie.match(/8bn-team=([^;]+)/);
+  if(c && c.length > 1) return c[1];
+})();
+axios.defaults.headers.post['Content-Type'] = 'application/json';
+axios.defaults.headers.put['Content-Type'] = 'application/json';
+
+
+
 Vue.component('participant-item', {
-  props: ['participant'],
+  props: ['participant', 'event'],
   template: '#participant-item-template',
   methods: {
- 		getUserName: function(id) {
-    	return this.$root.$data.users[id];
+ 		getUserName: function() {
+    	return this.$root.$data.users[this.participant];
     },
-    canLeave: function(p) {
-    	return(p === this.$root.$data.owner);
+    canLeave: function() {
+    	return(this.participant === this.$root.$data.token.user);
+    },
+    leave: function() {
+      console.log("leaving: "+event.id);
+      this.$root.$data.inProgress = true;
+      //this.event.participants.push(this.$root.$data.token.user);
+      axios.get('events/'+this.event.id+'/leave').then((res) => {
+        console.log(res);
+        this.$root.updateData();
+        //this.$root.$data.inProgress = false;
+      }).catch((err) => {
+        this.$root.$data.error.message = 'failed to leave event: '+err;
+        this.$root.$data.error.stack = err.stack;
+        this.$root.$data.inProgress = false;
+      });
     }
   }
 });
@@ -14,22 +42,56 @@ Vue.component('participant-item', {
 Vue.component('event-item', {
 	props: ['event'],
   template: '#event-item-template',
+  computed: {
+    date: function() {
+      console.log('computing date: '+this.event.timestamp);
+      return new Date(parseInt(this.event.timestamp,10)).toLocaleString();
+    }
+  },
   methods: {
   	toggleVisible: function() {
     	this.event.visible = !this.event.visible;
     },
-    canJoin: function(e) {
-      var joined = e.participants.includes(this.$root.$data.owner) ||
-        	e.alternates.includes(this.$root.$data.owner);
+    canJoin: function() {
+      var joined = this.event.participants.includes(this.$root.$data.token.user) ||
+        	this.event.alternates.includes(this.$root.$data.token.user);
       //console.log('joined: '+joined);
     	return !joined;  
     },
-    joinAsParticipant: function(e) {
-    	e.participants.push(this.$root.$data.owner);
+    join: function(type) {
+      //
+      console.log('join as '+type);
+      this.$root.$data.inProgress = true;
+      //this.event.participants.push(this.$root.$data.token.user);
+      axios.post('events/'+this.event.id+'/join', { type: type}).then((res) => {
+        console.log(res);
+        this.$root.updateData();
+        //this.$root.$data.inProgress = false;
+      }).catch((err) => {
+        this.$root.$data.error.message = 'failed to join event: '+err;
+        this.$root.$data.error.stack = err.stack;
+        this.$root.$data.inProgress = false;
+      });
     },
-    joinAsAlternate: function(e) {
-    	e.alternates.push(this.$root.$data.owner);
-    }
+    leaveAsParticipant: function() {
+      //
+      console.log('leaveAsParticipant');
+      this.$root.$data.inProgress = true;
+      //this.event.participants.push(this.$root.$data.token.user);
+      axios.post('events/'+this.event.id+'/leave', { type: 'participant'}).then((res) => {
+        console.log(res);
+        this.$root.updateData();
+        //this.$root.$data.inProgress = false;
+      }).catch((err) => {
+        this.$root.$data.error.message = 'failed to leave event: '+err;
+        this.$root.$data.error.stack = err.stack;
+        this.$root.$data.inProgress = false;
+      });
+    },
+    joinAsAlternate: function() {
+      //
+    	this.event.alternates.push(this.$root.$data.token.user);
+    },
     
   }
 });
@@ -37,6 +99,21 @@ Vue.component('event-item', {
 Vue.component('channel-item', {
   props: ['channel'],
   template: '#channel-item-template',
+  computed: {
+    // we keep events computed so that it automatically updates
+    // when $root.$data.events is updated
+    events: function() {
+      // get a list of events
+      console.log(this.channel);
+      var data = [];
+      var events = this.$root.$data.events;
+      for(var i=0; i < events.length; i++) {
+        if(events[i].channel === this.channel.id)
+          data.push(events[i]);
+      }
+      return data;
+    }
+  },
   methods: {
   	toggleVisible: function() {
     	this.channel.visible = !this.channel.visible;
@@ -46,103 +123,83 @@ Vue.component('channel-item', {
 
 var app = new Vue({
   el: '#app',
+  computed: {
+  },
   data: {
-    session: (function() {
-      // get the session cookie
-      var c = document.cookie.match(/8bn-team=([^;]+)/);
-      if(c && c.length > 1) return c[1];
-    } )(),
-    owner: 'U8',
-		users: {
-      'UR': '* reserved *',
-      'U0': 'geekydeaks',
-      'U1': 'retro',
-      'U2': 'zepto',
-      'U3': 'tnamorf',
-      'U4': 'imeyer',
-      'U5': 'starbuck',
-      'U6': 'jofax88',
-      'U7': 'rain-8bn',
-      'U8': 'unclenooby'
+    inProgress: false,
+    error: {
+      message: '',
+      stack: '',
+      stackVisible: false
     },
-    channels: [
-      { 
-        name: 'ps4-pve-raids',
-        id: 'C0',
-        visible: false,
-        events: [
-          {
-            name: 'Templar Tango',
-            id: 'E0',
-            date: '2017-08-11 14:00',
-            visible: false,
-            participants: [ 'U0', 'U1', 'U2', 'U3' ],
-            alternates: [ 'U4', 'U8' ]
-          },
-          {
-            name: 'Vosik Volta',
-            id: 'E1',
-            date: '2017-08-13 19:00',
-            visible: false,
-            participants: [ 'U2', 'UR', 'UR', 'U1', 'U4', 'U7' ],
-            alternates: [ 'U3' ]
-          },
-          {
-            name: 'Oryx Odissi',
-            id: 'E4',
-            date: '2017-08-13 10:00',
-            visible: false,
-            participants: [ 'U7' ],
-            alternates: [ 'U3' ]
+    token: {},
+		users: {},
+    channels: [],
+    events: []
+
+  },
+  methods: {
+    initData: function(data) {
+      // basic initialisation of the data we get back
+      // from the REST API
+      // we create the visible flag so that Vue.js can
+      // correctly watch it for changes
+      data.channels.forEach((c) => {
+        // hide all channels except for the one that 
+        // the token was issued on
+        c.visible = (c.id === data.token.channel);
+      });
+      // init the events so that they are all hidden
+      data.events.forEach((e) => {
+        e.visible = false;
+      });
+    },
+    updateData: function() {
+      console.log('updateData');
+      this.inProgress = true;
+      axios.get('events').then((res) => {
+        console.log(res);
+        if(res.data.status === 'ok') {
+          this.initData(res.data);
+          // keep the current visible state
+          this.mergeVisible(this.events, res.data.events);
+          this.mergeVisible(this.channels, res.data.channels);
+          // finally overwrite the current data
+          // need to do this for each root element
+          // 
+          this.token = res.data.token;
+          this.users = res.data.users;
+          this.channels = res.data.channels;
+          this.events = res.data.events;
+        }
+        this.inProgress = false;
+      }).catch((err) => {
+        this.error.message = 'failed to get event data: '+err;
+        this.error.stack = err.stack;
+        this.inProgress = false;
+      });
+    },
+    mergeVisible: function(oldData, newData) {
+      // merge the current and new visible states
+      newData.forEach((n) => {
+        for (var i=0; i < oldData.length; i++) {
+          if (oldData[i].id === n.id) {
+              // found it, set the visibility
+              n.visible = oldData[i].visible;
+              break; // our work here is done
           }
-        ]
-      },
-      {
-        name: 'ps4-pve-general',
-        id: 'C1',
-        visible: true,
-        events: [
-          {
-            name: 'Sword Swinging',
-            id: 'E2',
-            date: '2017-08-14 13:00',
-            visible: false,
-            participants: [ 'U1', 'U2', 'U3' ],
-            alternates: [ 'U4', 'U0' ]
-          },
-          {
-          	name: 'Fallen Fandango',
-            id: 'E5',
-            date: '2017-08-19 12:00',
-            visible: false,
-            participants: [ 'U8', 'UR' ],
-            alternates: []
-          }
-        ]
-      },
-      {
-        name: 'xb1-pve-raids',
-        id: 'C2',
-        visible: false,
-        events: [
-          {
-            name: 'Crota Cha Cha Cha',
-            id: 'E3',
-            date: '2017-08-10 14:00',
-            visible: false,
-            participants: [ 'U7', 'U5', 'U6' ],
-            alternates: [  ]
-          },
-          {
-            name: 'Wrath Waltz',
-            id: 'E6',
-            date: '2017-08-10 18:00',
-            visible: false,
-            participants: [ 'U7', 'UR', 'UR' ],
-            alternates: [  ]
-          }
-        ]
-      }
-    ]
+        }
+      });
+    
+    }
+  },
+  watch: {
+    events: function() {
+      console.log('events updated');
+    }
+  },
+  created: function() {
+    console.log('created');
+    this.updateData();
   }
 })

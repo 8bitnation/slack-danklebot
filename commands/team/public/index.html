@@ -3,13 +3,14 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://unpkg.com/vue"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css">
     <link rel="stylesheet" href="events.css">
 
 
     <script type="text/x-template" id="participant-item-template">
-        <div class="participant">{{ getUserName(participant) }}
-        <div class="leave" v-if="canLeave(participant)">[leave]</div>
+        <div class="participant">{{ getUserName() }}
+        <div class="leave" v-if="canLeave()" v-on:click="leave()">[leave]</div>
         </div>
     </script>
 
@@ -17,8 +18,7 @@
     <div>
         <div class="event">
             <div class="event-name" v-on:click="toggleVisible">
-            {{ event.name }} [ {{ event.participants.length }} ] / 
-            {{ event.date }}
+            <span class="date">{{ date }}</span> | {{ event.name }} [ {{ event.participants.length }} ] 
         </div>
         <div v-if="event.visible">
             <div class="participant-div">
@@ -26,10 +26,11 @@
             <participant-item 
                 v-for="participant in event.participants"
                 v-bind:participant="participant"
+                v-bind:event="event"
                 v-bind:key="participant">
             </participant-item>
-            <div v-if="canJoin(event)" 
-                    v-on:click="joinAsParticipant(event)"
+            <div v-if="canJoin()" 
+                    v-on:click="join('participant')"
                     class="participant">+ join</div>
             </div>
             <div class="participant-div">
@@ -37,10 +38,11 @@
                 <participant-item 
                 v-for="alternate in event.alternates"
                 v-bind:participant="alternate"
+                v-bind:event="event"
                 v-bind:key="alternate">
                 </participant-item>
-                <div v-if="canJoin(event)" 
-                        v-on:click="joinAsAlternate(event)" 
+                <div v-if="canJoin()" 
+                        v-on:click="join('alternate')" 
                     class="participant">+ join</div>
             </div>
         </div>
@@ -51,11 +53,11 @@
     <script type="text/x-template" id="channel-item-template">
     <div>
         <div class="channel" v-on:click="toggleVisible">
-            {{ channel.name }} [ {{ channel.events.length }} ]
+            {{ channel.name }} [ {{ events.length }} ]
         </div>
         <template v-if="channel.visible">
         <event-item 
-            v-for="event in channel.events"
+            v-for="event in events"
             v-bind:event="event"
             v-bind:key="event.id">
             </event-item>
@@ -71,9 +73,14 @@
 </head>
 <body>
 
-    <div class="title">8bn Events</div>
-
-    <div id="app">
+    <div id="app" v-bind:class="{ progress: inProgress }"> 
+        <div class="error" 
+            v-cloak
+            v-show="error.message" 
+            v-on:click="error.stackVisible = !error.stackVisible">{{ error.message }}
+            <pre class="errorStack" v-show="error.stackVisible">{{ error.stack }}</pre>
+        </div>
+        <div class="title">8bn Events</div>
         <channel-item
             v-for="channel in channels"
             v-bind:channel="channel"

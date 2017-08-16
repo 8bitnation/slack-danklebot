@@ -68,8 +68,7 @@ router.get('/auth/:token', async function(req, res) {
 router.get('/events', async function(req, res) {
 
     try {
-        // get the session token from the cookie
-        var token = req.cookies[COOKIE_NAME];
+        var token = req.headers['authorization'];
         if(token) {
             token = await db.team.tokens.findOne({token : token});
         }
@@ -89,21 +88,33 @@ router.get('/events', async function(req, res) {
         }
 
         const sc = await slack.channels();
+        console.debug(sc);
         if(!sc.ok) {
             logger.error("unable to get channel details from slack")
             return res.status(500).json({ status: 'failed to get channel details from slack' });
         }
-        const channels = {};
+        const channels = [];
         sc.channels.forEach((c) => {
             if(config.teamChannels.includes(c.name) 
                 && c.members.length 
-                && c.members.includes(token.user)) channels[c.id] = c.name;
+                && c.members.includes(token.user)) channels.push({ id: c.id, name: c.name});
         });
+        channels.sort((a, b) => a.name.localeCompare(b.name) );
 
         const events = await db.team.events.find().toArray();
+        events.forEach((e) => {
+            // map _id to id
+            e.id = e._id;
+            delete e._id;
+        });
+        events.sort((a, b) => a.timestamp - b.timestamp);
 
         return res.json({
             'status': 'ok',
+            token: { 
+                channel: token.channel, 
+                user: token.user  
+            },
             users: users,
             channels: channels,
             events: events
@@ -120,8 +131,7 @@ router.get('/events', async function(req, res) {
 router.post('/events', async function(req, res) {
 
     try {
-        // get the session token from the cookie
-        var token = req.cookies[COOKIE_NAME];
+        var token = req.headers['authorization'];
         if(token) {
             token = await db.team.tokens.findOne({token : token});
         }
@@ -143,6 +153,7 @@ router.post('/events', async function(req, res) {
         }
 
         const user = await slack.userInfo(token.user);
+        logger.debug(user);
         if(!user.ok) {
             logger.error("unable to get user details from slack");
             return res.status(500).json( { status: 'failed to get user info from slack'});
@@ -169,13 +180,12 @@ router.post('/events', async function(req, res) {
     }
 });
 
-// replace the event
-// e.g. join / leave / update
+// replace (i.e. update) the event
 router.put('/events/:id', async function(req, res) {
     try {
         logger.info(req.body);
-        // get the session token from the cookie
-        var token = req.cookies[COOKIE_NAME];
+
+        var token = req.headers['authorization'];
         if(token) {
             token = await db.team.tokens.findOne({token : token});
         }
@@ -185,7 +195,7 @@ router.put('/events/:id', async function(req, res) {
         }
 
         const event_id = new ObjectID(req.params.id);
-        logger.debug('updating event: ',event_id);
+        logger.debug('updating event: ',event_id.valueOf());
         
         const update = await db.team.events.updateOne({_id: event_id}, {
             $set: {
@@ -206,12 +216,78 @@ router.put('/events/:id', async function(req, res) {
     }
 });
 
+
+router.post('/events/:id/join', async function(req, res) {
+    try {
+        logger.info(req.body);
+        var token = req.headers['authorization'];
+        if(token) {
+            token = await db.team.tokens.findOne({token : token});
+        }
+
+        if(!token) {
+            return res.status(410).json({ status: 'session expired' });
+        }
+
+        if(!req.body.type) {
+            return res.status(400).json( { status: 'malformed request' } );
+        }
+
+        const event_id = new ObjectID(req.params.id);
+        logger.debug('user: '+token.user+', is joining event: '+event_id.valueOf());
+
+        const addToSet = {};
+
+        const update = await db.team.events.updateOne({_id: event_id}, {
+            $push: (req.body.type === 'participant') ? {
+                participants: token.user 
+            } : {
+                alternates: token.user
+            }
+        });
+
+        logger.debug(update.result);
+        return res.json({ status: 'ok', result: update.result});
+
+    } catch(err) {
+        logger.error(err);
+        return res.status(500).json({ status: 'internal error' });
+    }
+});
+
+router.get('/events/:id/leave', async function(req, res) {
+    try {
+        logger.info(req.body);
+        var token = req.headers['authorization'];
+        if(token) {
+            token = await db.team.tokens.findOne({token : token});
+        }
+
+        if(!token) {
+            return res.status(410).json({ status: 'session expired' });
+        }
+
+        const event_id = new ObjectID(req.params.id);
+        logger.debug('user: '+token.user+', is leaving event: '+event_id.valueOf());
+
+        // brute force leave
+        const update = await db.team.events.updateOne({_id: event_id}, {
+            $pull: { participants: token.user, alternates: token.user }
+        });
+
+        logger.debug(update.result);
+        return res.json({ status: 'ok', result: update.result});
+
+    } catch(err) {
+        logger.error(err);
+        return res.status(500).json({ status: 'internal error' });
+    }
+});
+
 // remove the event
 router.delete('/events/:id', async function(req, res) {
 
-})
-
-
+});
 
 //serve up static files
 router.use('/', express.static(path.join(__dirname, 'public')));
