@@ -63,10 +63,12 @@ body {
 
 .event-date {
   text-align: right;
+  font-size: 18px;
 }
 
 .event-count {
   text-align: right;
+  font-size: 18px;
 }
 
 .event-new {
@@ -78,6 +80,7 @@ body {
 .participant-list {
   font-size: 16px;
   color: whitesmoke;
+  margin-top: 4px;
 }
 
 .participant {
