@@ -22,8 +22,11 @@ app.use(cookieParser());
 // simple express logger
 app.use(function(req, res, next) {
   logger.info(`<<< ${req.method} ${req.originalUrl}`);
+  res.on('finish', function() {
+    logger.info(`>>> ${req.method} ${req.originalUrl} ${res.statusCode}`);
+  });
   next();
-  logger.info(`>>> ${req.method} ${req.originalUrl} ${res.statusCode}`);
+  
 });
 
 app.use(bodyParser.json());

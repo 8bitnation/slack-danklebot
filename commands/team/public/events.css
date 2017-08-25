@@ -4,22 +4,11 @@
 
 body {
   font-family: monospace;
+
 }
 
-.progress {
-  cursor: progress;
-}
-
-.error {
-  font-size: 22px;
-  text-align: center;
-  color: white;
-  background-color: red;
-}
-
-.errorStack {
-  font-size: 16px;
-  text-align: left;
+.in-progress {
+  cursor: wait;
 }
 
 .title {
@@ -27,19 +16,32 @@ body {
   text-align: center;
 }
 
-.leave {
-  float: right;
-  color: red;
+.app {
+  max-width: 1000px;
+  overflow: auto;
+  margin: auto;
 }
 
 .channel {
   font-size: 22px;
-  text-align: center;
   color: white;
   background-color: black;
   border-radius: 5px;
   padding: 10px;
   margin: 2px;
+}
+
+.channel-title {
+  text-align: center;
+}
+
+.channel-count {
+  text-align: right;
+}
+
+.leave {
+  float: right;
+  color: red;
 }
 
 .event {
@@ -49,48 +51,41 @@ body {
   margin: 2px;
 }
 
-.date {
-  color: lightgrey;
+.event-header {
+  font-size: 20px;
+  color: white;
+  margin-bottom: 3px;
 }
 
 .event-name {
-  font-size: 20px;
-  color: white;
-  margin-bottom: 2px;
-  padding-bottom: 5px;
+  font-weight: bold;
 }
 
-.event-detail {
-  font-size: 15px;
-  margin: 2px;
-  vertical-align: top;
-  width: 25%;
-  display: inline-block;
-  color: white;
+.event-date {
+  text-align: right;
 }
 
-.participant-div {
-  display: inline-block;
+.event-count {
+  text-align: right;
+}
+
+.event-new {
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.participant-list {
   font-size: 16px;
-  color: lightgray;
-  border-radius: 5px;
-  width: 45%;
-  vertical-align: top;
-}
-
-.button {
-  background: white;
-  border: none;
-  float: right;
-  border-radius: 5px;
+  color: whitesmoke;
 }
 
 .participant {
   font-size: 16px;
   background-color: white;
   color: black;
-  display: block;
   border-radius: 3px;
-  margin: 2px;
-  padding: 2px;
+  padding: 8px;
+  margin-top: 4px;
+  overflow: auto;
 }
