@@ -38,7 +38,7 @@
                 </participant-item>
                 <div v-if="canJoin()" 
                     v-on:click="join('participant')"
-                    class="participant">[ join ]
+                    class="participant join">[ join ]
                 </div>
             </div>
             <div class="col-xs-12 col-sm-6 participant-list">
@@ -51,7 +51,7 @@
                 </participant-item>
                 <div v-if="canJoin()" 
                     v-on:click="join('alternate')"
-                    class="participant">[ join ]
+                    class="participant join">[ join ]
                 </div>
             </div>
         </div>
@@ -76,10 +76,59 @@
                 v-bind:key="event.id">
             </event-item>
             <div class="container-fluid event">
-                <div class="row event-header">
-                    <div class="col-xs-12 event-new">create new event</div>
+                <div class="row event-header" 
+                         v-if="!newEvent">
+                    <div class="col-xs-12 event-new" 
+                        v-on:click="newEvent = true">create new event</div>
+                </div>
+                <div class="row event-header form-group-lg" v-if="newEvent" >
+                    <div class="col-xs-12 col-sm-12">
+                        <p>New Event:</p>    
+                        <input class="form-control" v-model="event.name" 
+                            maxlength="256" placeholder="Event name (Min 10 characters)">
+                    </div>
+                    <div class="col-xs-12 col-sm-4 picker">
+                        <select v-model="event.date">
+                            <option v-for="option in dates" v-bind:value="option.value">
+                                {{ option.text }}
+                            </option>
+                        </select>
+
+                    </div>
+                    <div class="col-xs-2 col-sm-1 picker">
+                        <select v-model="event.hour">
+                            <option v-for="option in hours" v-bind:value="option">
+                                {{ option }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-xs-2 col-sm-1 picker">
+                        <select v-model="event.minutes">
+                            <option v-for="option in minutes" v-bind:value="option.value">
+                                {{ option.text }}
+                            </option>
+                        </select>    
+                    </div>
+                    <div class="col-xs-2 col-sm-1 picker">
+                        <select v-model="event.ampm">
+                            <option v-for="option in ampms" v-bind:value="option">
+                                {{ option }}
+                            </option>
+                        </select>       
+                    </div>
+                    <div class="col-xs-8 picker">
+                        <button type="button" 
+                            class="btn btn-success"
+                            v-bind:disabled="event.name.length < 10">Submit</button>
+                    </div>
+                    <div class="col-xs-4 picker">
+                        <button type="button" 
+                                v-on:click="newEvent = false"
+                                class="btn btn-danger">Cancel</button>
+                    </div>
                 </div>
             </div>
+
         </template>
     </div>
     </script>

@@ -7,6 +7,10 @@ body {
 
 }
 
+option {
+  font-family: monospace;
+}
+
 .in-progress {
   cursor: wait;
 }
@@ -39,10 +43,6 @@ body {
   text-align: right;
 }
 
-.leave {
-  float: right;
-  color: red;
-}
 
 .event {
   background-color: dimgray;
@@ -64,6 +64,10 @@ body {
 .event-date {
   text-align: right;
   font-size: 18px;
+}
+
+.picker {
+  margin-top: 10px;
 }
 
 .event-count {
@@ -91,4 +95,13 @@ body {
   padding: 8px;
   margin-top: 4px;
   overflow: auto;
+}
+
+.leave {
+  float: right;
+  color: red;
+}
+
+.join {
+  color: green;
 }

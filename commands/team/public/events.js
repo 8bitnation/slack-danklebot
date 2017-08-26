@@ -99,6 +99,40 @@ Vue.component('event-item', {
 Vue.component('channel-item', {
   props: ['channel'],
   template: '#channel-item-template',
+  data: function() {
+    // get dates from today for the next 14 days
+    var dates = [];
+    var day = new Date();
+    for(var i = 0; i<14; i++) {
+      dates.push({
+        text: day.toDateString(),
+        value: day.getFullYear() + 
+          "-" + ("0" + day.getMonth()).slice (-2) + 
+          "-" + ("0" + day.getDate()).slice (-2)
+      });
+      day.setDate(day.getDate() + 1);
+    }
+
+    return {
+      newEvent: false,
+      event: {
+        name: '',
+        date: dates[0].value,
+        hour: day.getHours(),
+        // closest 15 mins
+        minutes: (parseInt(day.getMinutes()/15) * 15) % 60,
+        ampm: 'AM'
+      },
+      dates: dates,
+      hours: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      minutes: [
+        { text: '00', value: 0 }, 
+        { text: '15', value: 15 },
+        { text: '30', value: 30 },
+        { text: '45', value: 45 } ],
+      ampms: [ 'AM', 'PM' ]
+    }
+  },
   computed: {
     // we keep events computed so that it automatically updates
     // when $root.$data.events is updated
@@ -113,6 +147,7 @@ Vue.component('channel-item', {
       }
       return data;
     }
+
   },
   methods: {
   	toggleVisible: function() {
