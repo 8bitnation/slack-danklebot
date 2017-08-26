@@ -156,38 +156,41 @@ router.post('/events', async function(req, res) {
         }
 
         const {
-            channel,
-            name,
-            timestamp
+            event
         } = (req.body || {});
         logger.info(req.body);
 
         // check everything exists?
-        if(!channel || !name || !timestamp) {
+        if(!event.name || !event.date || !event.hour || 
+            !event.channel ||
+           !event.minutes || !event.tzOffset || !event.ampm) {
             return res.status(400).json({ status: 'malformed event' });
         }
 
-        const user = await slack.userInfo(token.user);
-        logger.debug(user);
-        if(!user.ok) {
-            logger.error("unable to get user details from slack");
-            return res.status(500).json( { status: 'failed to get user info from slack'});
-        }
+        const [year, month, day ] = event.date.split('-').map((d) => parseInt(d, 10));
+        var hour = event.hour === '12' ? 0 : parseInt(event.hour, 10);
+        const min = parseInt(event.minutes, 10);
+        if(event.ampm === 'PM') hour = hour + 12;
 
-        // update/insert the user
-        const userUpdate = await db.team.users.updateOne({ _id: token.user }, {$set: {name: user.user.name}},{upsert:true});
+        const timestamp = Date.UTC(year, month - 1, day, hour, min);
+        // offset according to TZ
+        const offset = parseInt(event.tzOffset, 10)*1000*60;
+        logger.debug(`timestamp: ${timestamp}, offset: ${offset}`);
+        
+        const utcDay = new Date(timestamp + offset);
+        logger.debug(`day: ${utcDay}`);
 
-        const event = await db.team.events.insertOne({
+        const newEvent = await db.team.events.insertOne({
             owner: token.user,
-            channel: channel,
-            name: name,
-            timestamp: timestamp,
+            channel: event.channel,
+            name: event.name,
+            timestamp: utcDay.valueOf(),
             participants: [ token.user ],
             alternates: [ ]
         });
 
         //logger.debug(event.insertedId);
-        return res.json({ status: 'ok', result: event.result, id : event.insertedId});
+        return res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
 
     } catch(err) {
         logger.error(err);

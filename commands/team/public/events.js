@@ -45,7 +45,8 @@ Vue.component('event-item', {
   computed: {
     date: function() {
       console.log('computing date: '+this.event.timestamp);
-      return new Date(parseInt(this.event.timestamp,10)).toLocaleString();
+      var  d = new Date(parseInt(this.event.timestamp,10));
+      return d.toDateString() + " " + d.toLocaleTimeString();
     }
   },
   methods: {
@@ -103,6 +104,12 @@ Vue.component('channel-item', {
     // get dates from today for the next 14 days
     var dates = [];
     var day = new Date();
+
+    // determine the hours and AM/PM
+    var hour = day.getHours();
+    var ampm = hour < 12 ? 'AM' : 'PM';
+    hour = hour % 12;
+    if(hour === 0) hour = 12;
     for(var i = 0; i<14; i++) {
       dates.push({
         text: day.toDateString(),
@@ -118,10 +125,12 @@ Vue.component('channel-item', {
       event: {
         name: '',
         date: dates[0].value,
-        hour: day.getHours(),
+        hour: hour,
+        channel: this.channel.id,
         // closest 15 mins
         minutes: (parseInt(day.getMinutes()/15) * 15) % 60,
-        ampm: 'AM'
+        ampm: ampm,
+        tzOffset: day.getTimezoneOffset()
       },
       dates: dates,
       hours: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -152,7 +161,23 @@ Vue.component('channel-item', {
   methods: {
   	toggleVisible: function() {
     	this.channel.visible = !this.channel.visible;
-    }
+    },
+    create: function() {
+      //
+      console.log('creating new event '+ this.event);
+      this.$root.$data.inProgress = true;
+      //this.event.participants.push(this.$root.$data.token.user);
+      axios.post('events', { event: this.event }).then((res) => {
+        console.log(res);
+        this.$root.updateData();
+        this.newEvent = false;
+        //this.$root.$data.inProgress = false;
+      }).catch((err) => {
+        this.$root.$data.error.message = 'failed to create event: '+err;
+        this.$root.$data.error.stack = err.stack;
+        this.$root.$data.inProgress = false;
+      });
+    },
   }
 });
 

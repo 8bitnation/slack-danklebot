@@ -119,6 +119,7 @@
                     <div class="col-xs-8 picker">
                         <button type="button" 
                             class="btn btn-success"
+                            v-on:click="create()"
                             v-bind:disabled="event.name.length < 10">Submit</button>
                     </div>
                     <div class="col-xs-4 picker">
