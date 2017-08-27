@@ -4,9 +4,11 @@ import config from '../../config';
 import {urlSafeToken} from '../../lib/token';
 import path from 'path';
 import {ObjectID} from 'mongodb';
+import { range, padStart } from 'lodash';
 
 import * as db from '../../lib/db';
 import * as slack from '../../lib/slack';
+import moment from 'moment-timezone';
 
 /**
  * 
@@ -24,10 +26,20 @@ export async function handler(payload) {
     const token = await urlSafeToken(32);
     const url = `http://${payload.req.headers.host}/team/auth/${token}`
 
+    const u = await slack.userInfo(payload.user_id);
+    if(!u.ok) {
+        return({
+            "response_type": "ephemeral",
+            text: `Oops, we were not able to determine who you are...`
+        });
+    }
+
     const insert = await db.team.tokens.insertOne({
         user: payload.user_id,
         channel: payload.channel_id,
         token: token,
+        tz: u.user.tz,
+        tz_offset: u.user.tz_offset,
         expire: Date.now() + 900000
     });
 
@@ -79,7 +91,9 @@ router.get('/auth/:token', async function(req, res) {
 
 // events REST
 
-// list all events
+// list all events - this is not really a REST style interface
+// as it's bascially helping to offload all the client side
+// ETL to the server
 router.get('/events', async function(req, res) {
 
     try {
@@ -108,31 +122,84 @@ router.get('/events', async function(req, res) {
             logger.error("unable to get channel details from slack")
             return res.status(500).json({ status: 'failed to get channel details from slack' });
         }
-        const channels = [];
+        const channels = {};
         sc.channels.forEach((c) => {
             if(config.teamChannels.includes(c.name) 
                 && c.members.length 
-                && c.members.includes(token.user)) channels.push({ id: c.id, name: c.name});
+                && c.members.includes(token.user)) {
+
+                channels[c.id] = { 
+                    visible: c.id === token.channel, 
+                    id: c.id, 
+                    name: c.name, 
+                    events: []
+                };
+            }
+
         });
-        channels.sort((a, b) => a.name.localeCompare(b.name) );
+
+
 
         const events = await db.team.events.find().toArray();
-        events.forEach((e) => {
-            // map _id to id
-            e.id = e._id;
-            delete e._id;
-        });
         events.sort((a, b) => a.timestamp - b.timestamp);
+        events.forEach((e) => {
 
+            // add event to the channel
+            if(channels[e.channel]) {
+                channels[e.channel].events.push({
+                    id: e._id,
+                    name: e.name,
+                    date: moment(e.timestamp).tz(token.tz).format('llll'),
+                    canJoin: !e.alternates.concat(e.participants).
+                            includes(token.user),
+                    visible: false,
+                    participants: e.participants.map( (u) => ({
+                        id: u,
+                        name: users[u],
+                        canLeave: u === token.user,
+                    }) ),
+                    alternates: e.alternates.map( (u) => ({
+                        id: u,
+                        name: users[u],
+                        canLeave: u === token.user,
+                    }) )
+                });
+            }
+        });
+
+
+        const now = moment().tz(token.tz);
+        const datePicker = {
+            
+            now: {
+                // get the closest 15 min period
+                minutes: (parseInt(now.minutes()/15, 10) * 15) % 60,
+                hour: now.hour() % 12,
+                period: now.format('A')
+            },
+            // determine the next 14 days from today in the locale
+            // of the user
+            dates: range(0, 14).map( (d) => ({
+                value: now.add(d ? 1 : 0, 'd').format('YYYY-MM-DD'),
+                text: now.format('ddd Do MMM YYYY')
+            }) ),
+            hours: range(1, 13),
+            minutes: range(0, 60, 15).map( (m) => padStart(m, 2, '0'))
+        };
+        
         return res.json({
             'status': 'ok',
             token: { 
                 channel: token.channel, 
                 user: token.user  
             },
-            users: users,
-            channels: channels,
-            events: events
+            datePicker: datePicker,
+            //users: users,
+            //events: events,
+            // sort the channels into locale alphabetical order
+            channels: Object.values(channels).
+                    sort((a, b) => a.name.localeCompare(b.name) )
+
         });
 
     } catch(err) {
@@ -163,28 +230,19 @@ router.post('/events', async function(req, res) {
         // check everything exists?
         if(!event.name || !event.date || !event.hour || 
             !event.channel ||
-           !event.minutes || !event.tzOffset || !event.ampm) {
+           !event.minutes || !event.period ) {
             return res.status(400).json({ status: 'malformed event' });
         }
 
-        const [year, month, day ] = event.date.split('-').map((d) => parseInt(d, 10));
-        var hour = event.hour === '12' ? 0 : parseInt(event.hour, 10);
-        const min = parseInt(event.minutes, 10);
-        if(event.ampm === 'PM') hour = hour + 12;
-
-        const timestamp = Date.UTC(year, month - 1, day, hour, min);
-        // offset according to TZ
-        const offset = parseInt(event.tzOffset, 10)*1000*60;
-        logger.debug(`timestamp: ${timestamp}, offset: ${offset}`);
-        
-        const utcDay = new Date(timestamp + offset);
-        logger.debug(`day: ${utcDay}`);
+        const timestamp = moment.tz(event.date + padStart(event.hour, 2, '0') + 
+                  event.minutes + event.period, 
+                  'YYYY-MM-DDhhmmA', token.tz);
 
         const newEvent = await db.team.events.insertOne({
             owner: token.user,
             channel: event.channel,
             name: event.name,
-            timestamp: utcDay.valueOf(),
+            timestamp: timestamp.valueOf(),
             participants: [ token.user ],
             alternates: [ ]
         });
