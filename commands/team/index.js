@@ -37,8 +37,8 @@ export async function handler(payload) {
 
     // update/insert the user
     const userUpdate = await db.team.users.updateOne(
-        { _id: token.user }, 
-        {$set: {name: user.user.name}},
+        { _id: u.user.id }, 
+        {$set: {name: u.user.name}},
         {upsert:true}
     );
 
