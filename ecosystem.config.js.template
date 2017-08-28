@@ -1,0 +1,26 @@
+module.exports = {
+    /**
+     * Application configuration section
+     * http://pm2.keymetrics.io/docs/usage/application-declaration/
+     */
+    apps : [
+  
+      // First application
+      {
+        name      : 'slackbot',
+        interpreter: 'node_modules/.bin/babel-node',
+        script    : 'index.js',
+        env: {
+          PORT: '3972',
+          BUNGIE_API_TOKEN: '',
+          SLACK_API_TOKEN: '',
+          DB_URL: 'mongodb://localhost:27017/8bn',
+          COMMON_VARIABLE: 'true'
+        },
+        env_production : {
+          NODE_ENV: 'production'
+        }
+      }
+  
+    ]
+  };

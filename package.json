@@ -32,6 +32,7 @@
     "moment": "^2.18.1",
     "moment-timezone": "^0.5.13",
     "mongodb": "^2.2.31",
+    "pm2": "^2.6.1",
     "query-string": "^4.2.3",
     "winston": "^2.3.1"
   }
