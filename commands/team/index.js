@@ -28,6 +28,7 @@ export async function handler(payload) {
 
     const u = await slack.userInfo(payload.user_id);
     if(!u.ok) {
+        logger.error('failed to get userInfo for: ', payload.user_id);
         return({
             "response_type": "ephemeral",
             text: `Oops, we were not able to determine who you are...`
@@ -80,6 +81,8 @@ if(config.debug) {
 router.get('/auth/:token', async function(req, res) {
 
     try {
+
+        logger.debug(`${req.method} ${req.url}: looking up token: ${req.params.token}`);
         const token = await db.team.tokens.findOne({token : req.params.token});
 
         
@@ -93,7 +96,7 @@ router.get('/auth/:token', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).send('Ouch!');
+        return res.status(500).send('Ooops, something went horribly wrong..');
     }
     
 });
@@ -101,18 +104,23 @@ router.get('/auth/:token', async function(req, res) {
 // events REST
 
 // list all events - this is not really a REST style interface
-// as it's bascially helping to offload all the client side
+// as it's basically helping to offload all the client side
 // ETL to the server
 router.get('/events', async function(req, res) {
 
     try {
-        var token = req.headers['authorization'];
-        if(token) {
-            token = await db.team.tokens.findOne({token : token});
+        const auth = req.headers['authorization'];
+        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
+
+        if(!auth) {
+            return res.status(403).json({ status: 'authorization missing'});
         }
 
+        const token = await db.team.tokens.findOne({token : auth});
+
         if(!token) {
-            return res.status(410).json({ status: 'session expired' });
+            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
+            return res.status(403).json({ status: 'session expired' });
         }
 
         // get a list of subscribed channels for this user
@@ -126,11 +134,12 @@ router.get('/events', async function(req, res) {
         }
 
         const sc = await slack.channels();
-        console.debug(sc);
         if(!sc.ok) {
             logger.error("unable to get channel details from slack")
             return res.status(500).json({ status: 'failed to get channel details from slack' });
         }
+        logger.debug(`found ${sc.channels.length} slack channels`);
+        
         const channels = {};
         sc.channels.forEach((c) => {
             if(config.teamChannels.includes(c.name) 
@@ -175,7 +184,6 @@ router.get('/events', async function(req, res) {
                 });
             }
         });
-
 
         const now = moment().tz(token.tz);
         const datePicker = {
@@ -222,19 +230,24 @@ router.get('/events', async function(req, res) {
 router.post('/events', async function(req, res) {
 
     try {
-        var token = req.headers['authorization'];
-        if(token) {
-            token = await db.team.tokens.findOne({token : token});
+        logger.debug(req.body);
+        const auth = req.headers['authorization'];
+        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
+
+        if(!auth) {
+            return res.status(403).json({ status: 'authorization missing'});
         }
 
+        const token = await db.team.tokens.findOne({token : auth});
+
         if(!token) {
-            return res.status(410).json({ status: 'session expired' });
+            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
+            return res.status(403).json({ status: 'session expired' });
         }
 
         const {
             event
         } = (req.body || {});
-        logger.info(req.body);
 
         // check everything exists?
         if(!event.name || !event.date || !event.hour || 
@@ -268,15 +281,20 @@ router.post('/events', async function(req, res) {
 // replace (i.e. update) the event
 router.put('/events/:id', async function(req, res) {
     try {
-        logger.info(req.body);
+        logger.debug(req.body);
 
-        var token = req.headers['authorization'];
-        if(token) {
-            token = await db.team.tokens.findOne({token : token});
+        const auth = req.headers['authorization'];
+        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
+
+        if(!auth) {
+            return res.status(403).json({ status: 'authorization missing'});
         }
 
+        const token = await db.team.tokens.findOne({token : auth});
+
         if(!token) {
-            return res.status(410).json({ status: 'session expired' });
+            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
+            return res.status(403).json({ status: 'session expired' });
         }
 
         const event_id = new ObjectID(req.params.id);
@@ -304,14 +322,20 @@ router.put('/events/:id', async function(req, res) {
 
 router.post('/events/:id/join', async function(req, res) {
     try {
-        logger.info(req.body);
-        var token = req.headers['authorization'];
-        if(token) {
-            token = await db.team.tokens.findOne({token : token});
+        logger.debug(req.body);
+        
+        const auth = req.headers['authorization'];
+        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
+
+        if(!auth) {
+            return res.status(403).json({ status: 'authorization missing'});
         }
 
+        const token = await db.team.tokens.findOne({token : auth});
+
         if(!token) {
-            return res.status(410).json({ status: 'session expired' });
+            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
+            return res.status(403).json({ status: 'session expired' });
         }
 
         if(!req.body.type) {
@@ -342,14 +366,19 @@ router.post('/events/:id/join', async function(req, res) {
 
 router.get('/events/:id/leave', async function(req, res) {
     try {
-        logger.info(req.body);
-        var token = req.headers['authorization'];
-        if(token) {
-            token = await db.team.tokens.findOne({token : token});
+        
+        const auth = req.headers['authorization'];
+        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
+
+        if(!auth) {
+            return res.status(403).json({ status: 'authorization missing'});
         }
 
+        const token = await db.team.tokens.findOne({token : auth});
+
         if(!token) {
-            return res.status(410).json({ status: 'session expired' });
+            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
+            return res.status(403).json({ status: 'session expired' });
         }
 
         const event_id = new ObjectID(req.params.id);
