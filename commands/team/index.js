@@ -52,20 +52,22 @@ export async function handler(payload) {
     
 }
 
-router.get('/auth', async function(req, res) {
-    const tc = await db.team.tokens.find({});
-    const tokens = [];
-    while(await tc.hasNext()) {
-        var t = await tc.next();
-        tokens.push( {
-            user: t.user,
-            channel: t.channel,
-            token: t.token,
-            url: `http://${req.headers.host}/team/auth/${t.token}`
-        });
-    }
-    res.json(tokens);
-});
+if(config.debug) {
+    router.get('/auth', async function(req, res) {
+        const tc = await db.team.tokens.find({});
+        const tokens = [];
+        while(await tc.hasNext()) {
+            var t = await tc.next();
+            tokens.push( {
+                user: t.user,
+                channel: t.channel,
+                token: t.token,
+                url: `http://${req.headers.host}/team/auth/${t.token}`
+            });
+        }
+        res.json(tokens);
+    });
+}
 
 // authenticate session and create cookie
 router.get('/auth/:token', async function(req, res) {
