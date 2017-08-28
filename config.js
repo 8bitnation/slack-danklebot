@@ -6,7 +6,14 @@ export default {
   slackApiToken: process.env.SLACK_API_TOKEN,
   dbUrl: process.env.DB_URL,
   teamChannels: [
+    'pc-pve-general',
+    'pc-pvp-activities',
+    'pc-pve-raids',
     'ps4-pve-general',
-    'ps4-pve-raids'
+    'ps4-pvp-activities',
+    'ps4-pve-raids',
+    'xb1-pve-general',
+    'xb1-pvp-activities',
+    'xb1-pve-raids'
   ]
 };

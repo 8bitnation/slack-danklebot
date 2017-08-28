@@ -141,7 +141,8 @@
         <div class="error" 
             v-cloak
             v-show="error.message" 
-            v-on:click="error.stackVisible = !error.stackVisible">{{ error.message }}
+            v-on:click="error.stackVisible = !error.stackVisible">
+            <p class="error-message">{{ error.message }}</p>
             <pre class="error-stack" v-show="error.stackVisible">{{ error.stack }}</pre>
         </div>
         <div class="title">8bn Events</div>

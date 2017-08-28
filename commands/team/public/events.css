@@ -22,7 +22,7 @@ option {
 
 .app {
   max-width: 1000px;
-  overflow: auto;
+  /* overflow: auto; /**/
   margin: auto;
 }
 
@@ -106,16 +106,24 @@ option {
   color: green;
 }
 
+
 .error {
-  position: fixed;
-  z-index: 999;
-  width: 100%;
-  overflow: show;
-  margin: auto;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+  z-index: 1; /* Sit on top */
+  overflow: hidden;
+  background-color: red;
+  position: fixed; /* Set the error div to fixed position */
+  top: 0; /* Position the error div at the top of the page */
+  /* width: 1000px; /**/
+  color: white;
+}
+
+.error-message {
+  font-size: 20px;
+  text-align: center;
+}
+
+.error-stack {
+  font-size: 14px;
   background-color: red;
   color: white;
 }
