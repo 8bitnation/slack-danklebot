@@ -32,10 +32,6 @@ app.use(function(req, res, next) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('/', function(req, res) {
-  res.redirect(config.homePage);
-});
-
 // add all the sub routers defined in commands
 forOwn(routers, function(v, k) {
   logger.info(`adding router for: ${k}`);
