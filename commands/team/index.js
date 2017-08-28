@@ -173,7 +173,7 @@ router.get('/events', async function(req, res) {
             
             now: {
                 // get the closest 15 min period
-                minutes: (parseInt(now.minutes()/15, 10) * 15) % 60,
+                minutes: padStart((parseInt(now.minutes()/15, 10) * 15) % 60, 2, '0'),
                 hour: now.hour() % 12,
                 period: now.format('A')
             },
