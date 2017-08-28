@@ -5,6 +5,7 @@ export default {
   bungieApiToken: process.env.BUNGIE_API_TOKEN,
   slackApiToken: process.env.SLACK_API_TOKEN,
   dbUrl: process.env.DB_URL,
+  homePage: 'http://8bitnation.com/',
   teamChannels: [
     'pc-pve-general',
     'pc-pvp-activities',
