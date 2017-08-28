@@ -153,6 +153,13 @@
             v-bind:channel="channel"
             v-bind:key="channel.id">
         </channel-item>
+        <div v-cloak v-show="token.user && !channels.length" class="container-fluid channel">
+            <div class="row">
+                <div class="col-xs-9 channel-title">
+                     No Subscribed Channels
+                </div>
+            </div>
+        </div>
     </div>
     <script src="events.js"></script>
 </body>
