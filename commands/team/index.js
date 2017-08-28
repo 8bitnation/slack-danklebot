@@ -35,6 +35,21 @@ export async function handler(payload) {
         });
     }
 
+    // update/insert the user
+    const userUpdate = await db.team.users.updateOne(
+        { _id: token.user }, 
+        {$set: {name: user.user.name}},
+        {upsert:true}
+    );
+
+    if(!userUpdate.result.ok) {
+        logger.error('failed to update user: ', userUpdate);
+        return({
+            "response_type": "ephemeral",
+            text: `Oops, we were not able to update the user cache...`
+        });        
+    }
+
     const insert = await db.team.tokens.insertOne({
         user: payload.user_id,
         channel: payload.channel_id,
