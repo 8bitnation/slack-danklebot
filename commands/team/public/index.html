@@ -141,9 +141,9 @@
         <div class="error" 
             v-cloak
             v-show="error.message" 
-            v-on:click="error.stackVisible = !error.stackVisible">
+            v-on:click="error.detailVisible = !error.detailVisible">
             <p class="error-message">{{ error.message }}</p>
-            <pre class="error-stack" v-show="error.stackVisible">{{ error.stack }}</pre>
+            <pre class="error-detail" v-show="error.detailVisible">{{ error.detail }}</pre>
         </div>
         <div class="title">8bn Events</div>
         <div v-bind:class="{ 'loading': inProgress }"></div>

@@ -109,8 +109,8 @@ var app = new Vue({
     inProgress: false,
     error: {
       message: '',
-      stack: '',
-      stackVisible: false
+      detail: '',
+      detailVisible: false
     },
     token: {},
     channels: [],
@@ -120,10 +120,18 @@ var app = new Vue({
   methods: {
     showError: function(msg, err) {
       if(err) {
-        this.error.message = msg + ':' + err;
-        this.error.stack = err.stack;
+        console.log(err);
+        this.error.message = msg + ': ' + err;
+        if(err.response) {
+          this.error.detail = err.response.data;
+        } else if(err.request) {
+          this.error.detail = err.request;
+        } else {
+          this.error.detail = err.stack;
+        }
       } else {
         this.error.message = msg;
+        this.error.detail = '';
       }
     },
     updateData: function() {
@@ -174,7 +182,7 @@ var app = new Vue({
       this.inProgress = false;
     }).catch( (err) => {
       this.inProgress = false;
-      this.showError('error', 'failed to get event data', err);
+      this.showError('failed to get event data', err);
     });
   }
 })

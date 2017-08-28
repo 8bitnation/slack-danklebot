@@ -122,8 +122,9 @@ option {
   text-align: center;
 }
 
-.error-stack {
+.error-detail {
   font-size: 14px;
   background-color: red;
   color: white;
+  border: none; 
 }

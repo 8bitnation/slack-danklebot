@@ -44,6 +44,13 @@ export async function handler(payload) {
     });
 
     // check if the insert worked?
+    if(!insert.result.ok) {
+        logger.error('failed to create token: ', insert);
+        return({
+            "response_type": "ephemeral",
+            text: `Oops, we were not able to create a token...`
+        });
+    }
 
     return({
         "response_type": "ephemeral",
