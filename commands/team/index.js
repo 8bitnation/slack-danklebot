@@ -291,7 +291,8 @@ router.post('/events', async function(req, res) {
             // send back a message to the channel
             const post = await slack.postMessage(event.channel, 
                  `<@${token.user}> has created a new event: *${event.name}*`+
-                ` for *<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>*`
+                ` for *<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>*`,
+                { as_user: true}
             );
             logger.debug(post);
             return res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
@@ -387,9 +388,10 @@ router.post('/events/:id/join', async function(req, res) {
 
         if(update.ok) {
             // send back a message to the channel
-            const post = await slack.postMessage(update.value.channel, 
-                 `<@${token.user}> has joined event: *${update.value.name}*` +
-                 ` as ${(req.body.type === 'participant') ? 'a' : 'an'} *${req.body.type}*`
+            const post = await slack.postMessage(update.value.channel,
+                `<@${token.user}> has joined event: *${update.value.name}*` +
+                ` as ${(req.body.type === 'participant') ? 'a' : 'an'} *${req.body.type}*`,
+                { as_user: true}
             );
             logger.debug(post);
             return res.json({ status: 'ok', result: update.lastErrorObject});
@@ -431,7 +433,8 @@ router.get('/events/:id/leave', async function(req, res) {
         if(update.ok) {
             // send back a message to the channel
             const post = await slack.postMessage(update.value.channel, 
-                 `<@${token.user}> has left event: *${update.value.name}*`
+                 `<@${token.user}> has left event: *${update.value.name}*`,
+                 { as_user: true}
             );
             logger.debug(post);
             return res.json({ status: 'ok', result: update.lastErrorObject });
