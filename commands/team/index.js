@@ -35,6 +35,8 @@ export async function handler(payload) {
         });
     }
 
+    logger.debug(`creating token for ${u.user.name} [${u.user.id}]`);
+
     // update/insert the user
     const userUpdate = await db.team.users.updateOne(
         { _id: u.user.id }, 
@@ -284,8 +286,21 @@ router.post('/events', async function(req, res) {
             alternates: [ ]
         });
 
+        if(newEvent.result.ok) {
+            const fallbackTime = timestamp.utc().format('llll');
+            // send back a message to the channel
+            const post = await slack.postMessage(event.channel, 
+                 `<@${token.user}> has created a new event: *${event.name}*`+
+                ` for *<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>*`
+            );
+            logger.debug(post);
+            return res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
+        } else {
+            return res.status(500).json({ status: 'failed to create event', result: newEvent.result });
+        }
         //logger.debug(event.insertedId);
-        return res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
+
+        
 
     } catch(err) {
         logger.error(err);
@@ -362,7 +377,7 @@ router.post('/events/:id/join', async function(req, res) {
 
         const addToSet = {};
 
-        const update = await db.team.events.updateOne({_id: event_id}, {
+        const update = await db.team.events.findOneAndUpdate({_id: event_id}, {
             $push: (req.body.type === 'participant') ? {
                 participants: token.user 
             } : {
@@ -370,8 +385,17 @@ router.post('/events/:id/join', async function(req, res) {
             }
         });
 
-        logger.debug(update.result);
-        return res.json({ status: 'ok', result: update.result});
+        if(update.ok) {
+            // send back a message to the channel
+            const post = await slack.postMessage(update.value.channel, 
+                 `<@${token.user}> has joined event: *${update.value.name}*` +
+                 ` as ${(req.body.type === 'participant') ? 'a' : 'an'} *${req.body.type}*`
+            );
+            logger.debug(post);
+            return res.json({ status: 'ok', result: update.lastErrorObject});
+        } else {
+            return res.status(500).json({ status: 'failed to join event', result: update.lastErrorObject });
+        }
 
     } catch(err) {
         logger.error(err);
@@ -400,12 +424,20 @@ router.get('/events/:id/leave', async function(req, res) {
         logger.debug('user: '+token.user+', is leaving event: '+event_id.valueOf());
 
         // brute force leave
-        const update = await db.team.events.updateOne({_id: event_id}, {
+        const update = await db.team.events.findOneAndUpdate({_id: event_id}, {
             $pull: { participants: token.user, alternates: token.user }
         });
 
-        logger.debug(update.result);
-        return res.json({ status: 'ok', result: update.result});
+        if(update.ok) {
+            // send back a message to the channel
+            const post = await slack.postMessage(update.value.channel, 
+                 `<@${token.user}> has left event: *${update.value.name}*`
+            );
+            logger.debug(post);
+            return res.json({ status: 'ok', result: update.lastErrorObject });
+        } else {
+            return res.status(500).json({ status: 'failed to leave event', result: update.lastErrorObject });
+        }        
 
     } catch(err) {
         logger.error(err);
