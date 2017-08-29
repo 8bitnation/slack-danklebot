@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=Promise"></script>
     <script src="https://unpkg.com/vue@2.4.2/dist/vue.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css">
@@ -155,12 +155,27 @@
         </channel-item>
         <div v-cloak v-show="token.user && !channels.length" class="container-fluid channel">
             <div class="row">
-                <div class="col-xs-9 channel-title">
+                <div class="col-xs-12 channel-title">
                      No Subscribed Channels
                 </div>
             </div>
         </div>
+        <div style="display:none" id="detect" class="container-fluid channel">
+            <div class="row">
+                <div class="col-xs-12 channel-title">
+                        Sorry, this app will not work with this browser
+                </div>
+            </div>
+        </div>
+        <div v-cloak v-show="!validAuth" class="container-fluid channel">
+            <div class="row">
+                <div class="col-xs-12 channel-title">
+                    No Auth Found - did you follow the /team link?
+                </div>
+            </div>
+        </div>
     </div>
+    <script src="detect.js"></script>
     <script src="events.js"></script>
 </body>
 

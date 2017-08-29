@@ -106,6 +106,7 @@ var app = new Vue({
   computed: {
   },
   data: {
+    validAuth: !!axios.defaults.headers.common['Authorization'],
     inProgress: false,
     error: {
       message: '',
@@ -176,6 +177,9 @@ var app = new Vue({
   },
   created: function() {
     console.log('created');
+
+    // only try and download data if we have a cookie
+    if(!this.validAuth) return;
 
     this.inProgress = true;
     this.updateData().then( (d) => {

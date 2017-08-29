@@ -70,7 +70,7 @@ export async function handler(payload) {
 
     return({
         "response_type": "ephemeral",
-        text: `<${url}|Please click on this message to review the 8bn events>`
+        text: `<${url}|Please use this link to review the 8bn events>`
     });
     
 }
