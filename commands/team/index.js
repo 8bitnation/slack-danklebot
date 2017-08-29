@@ -287,6 +287,8 @@ router.post('/events', async function(req, res) {
         });
 
         if(newEvent.result.ok) {
+
+            res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
             const fallbackTime = timestamp.utc().format('llll');
             // send back a message to the channel
             const post = await slack.postMessage(event.channel, 
@@ -295,7 +297,7 @@ router.post('/events', async function(req, res) {
                 { as_user: true}
             );
             logger.debug(post);
-            return res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
+            return;
         } else {
             return res.status(500).json({ status: 'failed to create event', result: newEvent.result });
         }
@@ -387,6 +389,8 @@ router.post('/events/:id/join', async function(req, res) {
         });
 
         if(update.ok) {
+
+            res.json({ status: 'ok', result: update.lastErrorObject});
             // send back a message to the channel
             const post = await slack.postMessage(update.value.channel,
                 `<@${token.user}> has joined event: *${update.value.name}*` +
@@ -394,7 +398,7 @@ router.post('/events/:id/join', async function(req, res) {
                 { as_user: true}
             );
             logger.debug(post);
-            return res.json({ status: 'ok', result: update.lastErrorObject});
+            return;
         } else {
             return res.status(500).json({ status: 'failed to join event', result: update.lastErrorObject });
         }
@@ -431,13 +435,15 @@ router.get('/events/:id/leave', async function(req, res) {
         });
 
         if(update.ok) {
+
+            res.json({ status: 'ok', result: update.lastErrorObject });
             // send back a message to the channel
             const post = await slack.postMessage(update.value.channel, 
-                 `<@${token.user}> has left event: *${update.value.name}*`,
-                 { as_user: true}
+                `<@${token.user}> has left event: *${update.value.name}*`,
+                { as_user: true}
             );
             logger.debug(post);
-            return res.json({ status: 'ok', result: update.lastErrorObject });
+            return;
         } else {
             return res.status(500).json({ status: 'failed to leave event', result: update.lastErrorObject });
         }        
