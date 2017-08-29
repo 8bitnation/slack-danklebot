@@ -113,7 +113,8 @@ router.get('/auth/:token', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).send('Ooops, something went horribly wrong..');
+        if(!res.headersSent)
+            res.status(500).send('Ooops, something went horribly wrong..');
     }
     
 });
@@ -238,7 +239,8 @@ router.get('/events', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).json({ status: 'internal error' });
+        if(!res.headerSent)
+            res.status(500).json({ status: 'internal error' });
     }
 
 });
@@ -307,7 +309,8 @@ router.post('/events', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).json({ status: 'internal error' });
+        if(!res.headersSent)
+            res.status(500).json({ status: 'internal error' });
     }
 });
 
@@ -348,7 +351,8 @@ router.put('/events/:id', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).json({ status: 'internal error' });
+        if(!res.headersSent)
+            res.status(500).json({ status: 'internal error' });
     }
 });
 
@@ -405,7 +409,8 @@ router.post('/events/:id/join', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).json({ status: 'internal error' });
+        if(!res.headersSent)
+            res.status(500).json({ status: 'internal error' });
     }
 });
 
@@ -450,7 +455,8 @@ router.get('/events/:id/leave', async function(req, res) {
 
     } catch(err) {
         logger.error(err);
-        return res.status(500).json({ status: 'internal error' });
+        if(!res.headersSent)
+            res.status(500).json({ status: 'internal error' });
     }
 });
 
