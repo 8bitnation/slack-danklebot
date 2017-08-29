@@ -17,15 +17,16 @@ Vue.component('participant-item', {
     leave: function() {
       console.log("leaving: "+event.id);
       this.$root.$data.inProgress = true;
+      var that = this;
       //this.event.participants.push(this.$root.$data.token.user);
-      axios.get('events/'+this.event.id+'/leave').then((res) => {
+      axios.get('events/'+this.event.id+'/leave').then(function(res) {
         console.log(res);
-        return this.$root.updateData();
-      }).then( (d) => {
-        this.$root.$data.inProgress = false;
-      }).catch((err) => {
-        this.$root.showError('failed to leave event', err);
-        this.$root.$data.inProgress = false;
+        return that.$root.updateData();
+      }).then( function(d) {
+        that.$root.$data.inProgress = false;
+      }).catch(function(err) {
+        that.$root.showError('failed to leave event', err);
+        that.$root.$data.inProgress = false;
       });
     }
   }
@@ -40,16 +41,18 @@ Vue.component('event-item', {
     },
     join: function(type) {
       //
+      var that = this;
       console.log('join as '+type);
       this.$root.$data.inProgress = true;
-      axios.post('events/'+this.event.id+'/join', { type: type}).then((res) => {
+      axios.post('events/'+this.event.id+'/join', { type: type}
+      ).then(function (res) {
         console.log(res);
-        this.$root.updateData();
-      }).then( (d) => {
-        this.$root.$data.inProgress = false;
-      }).catch((err) => {
-        this.$root.showError('failed to join event', err);
-        this.$root.$data.inProgress = false;
+        that.$root.updateData();
+      }).then( function (d) {
+        that.$root.$data.inProgress = false;
+      }).catch(function (err) {
+        that.$root.showError('failed to join event', err);
+        that.$root.$data.inProgress = false;
       });
     }
     
@@ -83,19 +86,20 @@ Vue.component('channel-item', {
     },
     create: function() {
       //
+      var that = this;
       console.log('creating new event '+ this.event);
       this.$root.$data.inProgress = true;
       //this.event.participants.push(this.$root.$data.token.user);
-      axios.post('events', { event: this.event }).then((res) => {
+      axios.post('events', { event: this.event }).then(function (res) {
         console.log(res);
-        return this.$root.updateData();
-      }).then( (d) => {
+        return that.$root.updateData();
+      }).then( function (d) {
         // hide the new event
-        this.newEvent = false;
-        this.$root.$data.inProgress = false;
-      }).catch((err) => {
-        this.$root.showError('failed to create event', err);
-        this.$root.$data.inProgress = false;
+        that.newEvent = false;
+        that.$root.$data.inProgress = false;
+      }).catch(function (err) {
+        that.$root.showError('failed to create event', err);
+        that.$root.$data.inProgress = false;
       });
     },
   }
@@ -136,18 +140,19 @@ var app = new Vue({
       }
     },
     updateData: function() {
+      var that = this;
       console.log('updateData');
-      return axios.get('events').then((res) => {
+      return axios.get('events').then(function (res) {
         console.log(res);
         if(res.data.status === 'ok') {
           // keep the current visible state
-          this.mergeVisible(this.channels, res.data.channels);
+          that.mergeVisible(that.channels, res.data.channels);
           // finally overwrite the current data
           // need to do this for each root element
           // 
-          this.token = res.data.token;
-          this.channels = res.data.channels;
-          this.datePicker = res.data.datePicker;
+          that.token = res.data.token;
+          that.channels = res.data.channels;
+          that.datePicker = res.data.datePicker;
           return Promise.resolve(res.data);
         } else {
           return Promise.reject(res.data.status);
@@ -155,14 +160,15 @@ var app = new Vue({
       });
     },
     mergeVisible: function(oldData, newData) {
+      var that = this;
       // merge the current and new visible states
-      newData.forEach((n) => {
+      newData.forEach(function (n) {
         for (var i=0; i < oldData.length; i++) {
           if (oldData[i].id === n.id) {
               // found it, set the visibility
               n.visible = oldData[i].visible;
               // now merge the events if they exist
-              if(n.events) this.mergeVisible(oldData[i].events, n.events);
+              if(n.events) that.mergeVisible(oldData[i].events, n.events);
               break; // our work here is done
           }
         }
@@ -177,16 +183,16 @@ var app = new Vue({
   },
   created: function() {
     console.log('created');
-
+    var that = this;
     // only try and download data if we have a cookie
     if(!this.validAuth) return;
 
     this.inProgress = true;
-    this.updateData().then( (d) => {
-      this.inProgress = false;
-    }).catch( (err) => {
-      this.inProgress = false;
-      this.showError('failed to get event data', err);
+    this.updateData().then(function (d) {
+      that.inProgress = false;
+    }).catch(function (err) {
+      that.inProgress = false;
+      that.showError('failed to get event data', err);
     });
   }
-})
+});
