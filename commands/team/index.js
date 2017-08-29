@@ -291,12 +291,36 @@ router.post('/events', async function(req, res) {
         if(newEvent.result.ok) {
 
             res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
-            const fallbackTime = timestamp.utc().format('llll');
+            //const event = newEvent.value;
+            //const timestamp = moment(event.timestamp);
+            const fallbackTime = timestamp.utc().format('llll') + " UTC";
             // send back a message to the channel
-            const post = await slack.postMessage(event.channel, 
-                 `<@${token.user}> has created a new event: *${event.name}*`+
-                ` for *<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>*`,
-                { as_user: true}
+            const attachment = {
+                "fallback": `<@${token.user}> has created ${event.name}`,
+                "color": "#36a64f",
+                "title": `<@${token.user}> has created ${event.name}`,
+                "fields": [
+                    {
+                        "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                    },
+                    {
+                        "title": "Participants",
+                        "value": "1", // need to show the number of spaces
+                        "short": true
+                    },
+                    {
+                        "title": "Alternates",
+                        "value": "0",
+                        "short": true
+                    }
+                ]
+            };
+            const post = await slack.postMessage(event.channel, undefined,
+                { as_user: true,
+                    attachments: [
+                        attachment
+                    ]
+                }
             );
             logger.debug(post);
             return;
@@ -390,16 +414,41 @@ router.post('/events/:id/join', async function(req, res) {
             } : {
                 alternates: token.user
             }
-        });
+        },{ returnOriginal: false });
 
         if(update.ok) {
 
             res.json({ status: 'ok', result: update.lastErrorObject});
+            const event = update.value;
+            const timestamp = moment(event.timestamp);
+            const fallbackTime = timestamp.utc().format('llll') + " UTC";
             // send back a message to the channel
-            const post = await slack.postMessage(update.value.channel,
-                `<@${token.user}> has joined event: *${update.value.name}*` +
-                ` as ${(req.body.type === 'participant') ? 'a' : 'an'} *${req.body.type}*`,
-                { as_user: true}
+            const attachment = {
+                "fallback": `<@${token.user}> has joined ${event.name}`,
+                "color": "#36a64f",
+                "title": `<@${token.user}> has joined ${event.name}`,
+                "fields": [
+                    {
+                        "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                    },
+                    {
+                        "title": "Participants",
+                        "value": `${event.participants.length}`,
+                        "short": true
+                    },
+                    {
+                        "title": "Alternates",
+                        "value": `${event.alternates.length}`,
+                        "short": true
+                    }
+                ]
+            };
+            const post = await slack.postMessage(update.value.channel, undefined,
+                { as_user: true,
+                    attachments: [
+                        attachment
+                    ]
+                }
             );
             logger.debug(post);
             return;
@@ -437,15 +486,42 @@ router.get('/events/:id/leave', async function(req, res) {
         // brute force leave
         const update = await db.team.events.findOneAndUpdate({_id: event_id}, {
             $pull: { participants: token.user, alternates: token.user }
-        });
+        },
+        { returnOriginal: false });
 
         if(update.ok) {
 
             res.json({ status: 'ok', result: update.lastErrorObject });
+            const event = update.value;
+            const timestamp = moment(event.timestamp);
+            const fallbackTime = timestamp.utc().format('llll') + " UTC";
             // send back a message to the channel
-            const post = await slack.postMessage(update.value.channel, 
-                `<@${token.user}> has left event: *${update.value.name}*`,
-                { as_user: true}
+            const attachment = {
+                "fallback": `<@${token.user}> has left ${event.name}`,
+                "color": "#36a64f",
+                "title": `<@${token.user}> has left ${event.name}`,
+                "fields": [
+                    {
+                        "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                    },
+                    {
+                        "title": "Participants",
+                        "value": `${event.participants.length}`,
+                        "short": true
+                    },
+                    {
+                        "title": "Alternates",
+                        "value": `${event.alternates.length}`,
+                        "short": true
+                    }
+                ]
+            };
+            const post = await slack.postMessage(update.value.channel, undefined,
+                { as_user: true,
+                    attachments: [
+                        attachment
+                    ]
+                }
             );
             logger.debug(post);
             return;
