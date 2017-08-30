@@ -28,14 +28,14 @@ export async function handler(payload) {
 
     const u = await slack.userInfo(payload.user_id);
     if(!u.ok) {
-        logger.error('failed to get userInfo for: ', payload.user_id);
+        logger.error('failed to get userInfo for: %s', payload.user_id);
         return({
             "response_type": "ephemeral",
             text: `Oops, we were not able to determine who you are...`
         });
     }
 
-    logger.debug(`creating token for ${u.user.name} [${u.user.id}]`);
+    logger.debug('creating token for %s [%s]', u.user.name, u.user.id);
 
     // update/insert the user
     const userUpdate = await db.team.users.updateOne(
@@ -45,15 +45,16 @@ export async function handler(payload) {
     );
 
     if(!userUpdate.result.ok) {
-        logger.error('failed to update user: ', userUpdate);
+        logger.error('failed to update user: %s', userUpdate);
         return({
             "response_type": "ephemeral",
-            text: `Oops, we were not able to update the user cache...`
+            text: 'Oops, we were not able to update the user cache...'
         });        
     }
 
     const insert = await db.team.tokens.insertOne({
         user: payload.user_id,
+        name: u.user.name,
         channel: payload.channel_id,
         token: token,
         tz: u.user.tz,
@@ -63,7 +64,7 @@ export async function handler(payload) {
 
     // check if the insert worked?
     if(!insert.result.ok) {
-        logger.error('failed to create token: ', insert);
+        logger.error('failed to create token: %s', insert);
         return({
             "response_type": "ephemeral",
             text: `Oops, we were not able to create a token...`
@@ -99,7 +100,7 @@ router.get('/auth/:token', async function(req, res) {
 
     try {
 
-        logger.debug(`${req.method} ${req.url}: looking up token: ${req.params.token}`);
+        logger.debug('%s %s: looking up token: %s', req.method, req.url, req.params.token);
         const token = await db.team.tokens.findOne({token : req.params.token});
 
         
@@ -121,14 +122,12 @@ router.get('/auth/:token', async function(req, res) {
 
 // events REST
 
-// list all events - this is not really a REST style interface
-// as it's basically helping to offload all the client side
-// ETL to the server
-router.get('/events', async function(req, res) {
+// authentication middleware
+router.use('/events', async function(req, res, next){
 
     try {
         const auth = req.headers['authorization'];
-        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
+        logger.debug('%s %s: auth: %s', req.method, req.url, auth);
 
         if(!auth) {
             return res.status(403).json({ status: 'authorization missing'});
@@ -137,9 +136,26 @@ router.get('/events', async function(req, res) {
         const token = await db.team.tokens.findOne({token : auth});
 
         if(!token) {
-            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
+            logger.debug('%s %s: failed to find token for: %s', req.method, req.url, auth);
             return res.status(403).json({ status: 'session expired' });
         }
+        req.token = token;
+        next();
+    } catch(err) {
+        logger.error(err);
+        if(!res.headerSent)
+            res.status(500).json({ status: 'internal error' });
+    }
+
+});
+
+// list all events - this is not really a REST style interface
+// as it's basically helping to offload all the client side
+// ETL to the server
+router.get('/events', async function(req, res) {
+
+    try {
+        const token = req.token;
 
         // get a list of subscribed channels for this user
         // generate a list of events filtered by channels
@@ -156,7 +172,7 @@ router.get('/events', async function(req, res) {
             logger.error("unable to get channel details from slack")
             return res.status(500).json({ status: 'failed to get channel details from slack' });
         }
-        logger.debug(`found ${sc.channels.length} slack channels`);
+        logger.debug('found %d slack channels', sc.channels.length);
         
         const channels = {};
         sc.channels.forEach((c) => {
@@ -173,8 +189,6 @@ router.get('/events', async function(req, res) {
             }
 
         });
-
-
 
         const events = await db.team.events.find().toArray();
         events.sort((a, b) => a.timestamp - b.timestamp);
@@ -250,19 +264,7 @@ router.post('/events', async function(req, res) {
 
     try {
         logger.debug(req.body);
-        const auth = req.headers['authorization'];
-        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
-
-        if(!auth) {
-            return res.status(403).json({ status: 'authorization missing'});
-        }
-
-        const token = await db.team.tokens.findOne({token : auth});
-
-        if(!token) {
-            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
-            return res.status(403).json({ status: 'session expired' });
-        }
+        const token = req.token;
 
         const {
             event
@@ -296,7 +298,7 @@ router.post('/events', async function(req, res) {
             const fallbackTime = timestamp.utc().format('llll') + " UTC";
             // send back a message to the channel
             const attachment = {
-                "fallback": `<@${token.user}> has created ${event.name}`,
+                "fallback": `${token.name} has created ${event.name}`,
                 "color": "#36a64f",
                 "title": `<@${token.user}> has created ${event.name}`,
                 "fields": [
@@ -325,11 +327,10 @@ router.post('/events', async function(req, res) {
             logger.debug(post);
             return;
         } else {
+            logger.error('user: %s [%s], failed to create %s', token.name, token.user, event.name);
             return res.status(500).json({ status: 'failed to create event', result: newEvent.result });
         }
         //logger.debug(event.insertedId);
-
-        
 
     } catch(err) {
         logger.error(err);
@@ -342,20 +343,7 @@ router.post('/events', async function(req, res) {
 router.put('/events/:id', async function(req, res) {
     try {
         logger.debug(req.body);
-
-        const auth = req.headers['authorization'];
-        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
-
-        if(!auth) {
-            return res.status(403).json({ status: 'authorization missing'});
-        }
-
-        const token = await db.team.tokens.findOne({token : auth});
-
-        if(!token) {
-            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
-            return res.status(403).json({ status: 'session expired' });
-        }
+        const token = req.token;
 
         const event_id = new ObjectID(req.params.id);
         logger.debug('updating event: ',event_id.valueOf());
@@ -383,28 +371,15 @@ router.put('/events/:id', async function(req, res) {
 
 router.post('/events/:id/join', async function(req, res) {
     try {
-        logger.debug(req.body);
-        
-        const auth = req.headers['authorization'];
-        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
-
-        if(!auth) {
-            return res.status(403).json({ status: 'authorization missing'});
-        }
-
-        const token = await db.team.tokens.findOne({token : auth});
-
-        if(!token) {
-            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
-            return res.status(403).json({ status: 'session expired' });
-        }
+        logger.debug(req.body);       
+        const token = req.token;
 
         if(!req.body.type) {
             return res.status(400).json( { status: 'malformed request' } );
         }
 
         const event_id = new ObjectID(req.params.id);
-        logger.debug('user: '+token.user+', is joining event: '+event_id.valueOf());
+        logger.debug('user: %s [%s], is joining %s', token.name, token.user, event_id.valueOf());
 
         const addToSet = {};
 
@@ -424,7 +399,7 @@ router.post('/events/:id/join', async function(req, res) {
             const fallbackTime = timestamp.utc().format('llll') + " UTC";
             // send back a message to the channel
             const attachment = {
-                "fallback": `<@${token.user}> has joined ${event.name}`,
+                "fallback": `${token.name} has joined ${event.name}`,
                 "color": "#36a64f",
                 "title": `<@${token.user}> has joined ${event.name}`,
                 "fields": [
@@ -453,6 +428,7 @@ router.post('/events/:id/join', async function(req, res) {
             logger.debug(post);
             return;
         } else {
+            logger.error('user: %s [%s], failed to join %s', token.name, token.user, event_id.valueOf());
             return res.status(500).json({ status: 'failed to join event', result: update.lastErrorObject });
         }
 
@@ -466,22 +442,10 @@ router.post('/events/:id/join', async function(req, res) {
 router.get('/events/:id/leave', async function(req, res) {
     try {
         
-        const auth = req.headers['authorization'];
-        logger.debug(`${req.method} ${req.url}: auth: ${auth}`);
-
-        if(!auth) {
-            return res.status(403).json({ status: 'authorization missing'});
-        }
-
-        const token = await db.team.tokens.findOne({token : auth});
-
-        if(!token) {
-            logger.debug(`${req.method} ${req.url}: failed to find token for: ${auth}`);
-            return res.status(403).json({ status: 'session expired' });
-        }
+        const token = req.token;
 
         const event_id = new ObjectID(req.params.id);
-        logger.debug('user: '+token.user+', is leaving event: '+event_id.valueOf());
+        logger.debug('user: %s [%s], is leaving %s', token.name, token.user, event_id.valueOf());
 
         // brute force leave
         const update = await db.team.events.findOneAndUpdate({_id: event_id}, {
@@ -497,7 +461,7 @@ router.get('/events/:id/leave', async function(req, res) {
             const fallbackTime = timestamp.utc().format('llll') + " UTC";
             // send back a message to the channel
             const attachment = {
-                "fallback": `<@${token.user}> has left ${event.name}`,
+                "fallback": `${token.name} has left ${event.name}`,
                 "color": "#36a64f",
                 "title": `<@${token.user}> has left ${event.name}`,
                 "fields": [
@@ -526,6 +490,7 @@ router.get('/events/:id/leave', async function(req, res) {
             logger.debug(post);
             return;
         } else {
+            logger.debug('user: %s [%s], failed to leave %s', token.name, token.user, event_id.valueOf());            
             return res.status(500).json({ status: 'failed to leave event', result: update.lastErrorObject });
         }        
 
