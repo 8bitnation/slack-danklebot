@@ -160,7 +160,7 @@ router.get('/events', async function(req, res) {
         // get a list of subscribed channels for this user
         // generate a list of events filtered by channels
         // db.team.events.find()
-        const users = {};
+        const users = { 'R' : '* Reserved *'};
         const uc = await db.team.users.find();
         while(await uc.hasNext()) {
             var u = await uc.next();
@@ -199,6 +199,7 @@ router.get('/events', async function(req, res) {
                 channels[e.channel].events.push({
                     id: e._id,
                     name: e.name,
+                    maxParticipants: e.maxParticipants,
                     date: moment(e.timestamp).tz(token.tz).format('llll'),
                     canJoin: !e.alternates.concat(e.participants).
                             includes(token.user),
@@ -223,7 +224,7 @@ router.get('/events', async function(req, res) {
             now: {
                 // get the closest 15 min period
                 minutes: padStart((parseInt(now.minutes()/15, 10) * 15) % 60, 2, '0'),
-                hour: now.hour() % 12,
+                hour: now.hour() % 12 ? now.hour() % 12 : 12,
                 period: now.format('A')
             },
             // determine the next 14 days from today in the locale
@@ -232,10 +233,7 @@ router.get('/events', async function(req, res) {
                 value: now.add(d ? 1 : 0, 'd').format('YYYY-MM-DD'),
                 text: now.format('ddd Do MMM YYYY')
             }) ),
-            hours: range(1, 13).map( (h) => ({
-                value: h % 12,
-                text: h
-            })),
+            hours: range(1, 13),
             minutes: range(0, 60, 15).map( (m) => padStart(m, 2, '0'))
         };
         
@@ -275,8 +273,10 @@ router.post('/events', async function(req, res) {
 
         // check everything exists?
         if(!event.name || !event.date || !event.hour || 
-            !event.channel ||
-           !event.minutes || !event.period ) {
+            !event.channel || !event.maxParticipants || 
+            // just == to catch both undefined and null
+            event.reserved == null ||
+            !event.minutes || !event.period ) {
             return res.status(400).json({ status: 'malformed event' });
         }
 
@@ -284,12 +284,16 @@ router.post('/events', async function(req, res) {
                   event.minutes + event.period, 
                   'YYYY-MM-DDhhmmA', token.tz);
 
+        const participants = [ token.user ];
+        for(var i = 0; i < event.reserved; i++) participants.push('R');
+
         const newEvent = await db.team.events.insertOne({
             owner: token.user,
             channel: event.channel,
             name: event.name,
             timestamp: timestamp.valueOf(),
-            participants: [ token.user ],
+            participants: participants,
+            maxParticipants: event.maxParticipants,
             alternates: [ ]
         });
 
@@ -310,7 +314,7 @@ router.post('/events', async function(req, res) {
                     },
                     {
                         "title": "Participants",
-                        "value": "1", // need to show the number of spaces
+                        "value": `${participants.length}/${maxParticipants}`, // need to show the number of spaces
                         "short": true
                     },
                     {

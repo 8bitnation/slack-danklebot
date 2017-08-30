@@ -24,13 +24,13 @@
             <div class="col-xs-1 col-sm-1">{{ event.visible ? '-' : '+' }}</div>
             <div class="col-xs-11 col-sm-5 event-name">{{ event.name }}</div>
             <div class="col-xs-3 col-sm-2 event-count">
-                [{{ event.participants.length }}+{{ event.alternates.length }}]
+                [{{ event.participants.length }}/{{event.maxParticipants}} +{{ event.alternates.length }}]
             </div>
             <div class="col-xs-9 col-sm-4 event-date">{{ event.date }}</div>
         </div>
         <div class="row" v-if="event.visible">
             <div class="col-xs-12 col-sm-6 participant-list">
-                Participants [{{event.participants.length}}]
+                Participants [{{event.participants.length}}/{{event.maxParticipants}}]
                 <participant-item 
                     v-for="participant in event.participants"
                     v-bind:participant="participant"
@@ -88,7 +88,7 @@
                         <input class="form-control" v-model="event.name" 
                             maxlength="256" placeholder="Event name (Min 10 characters)">
                     </div>
-                    <div class="col-xs-12 col-sm-4 picker">
+                    <div class="col-xs-12 col-sm-5 picker">
                         <select v-model="event.date">
                             <option v-for="option in dates" v-bind:value="option.value">
                                 {{ option.text }}
@@ -96,34 +96,48 @@
                         </select>
 
                     </div>
-                    <div class="col-xs-2 col-sm-1 picker">
+                    <div class="col-xs-12 col-sm-5 picker">
                         <select v-model="event.hour">
-                            <option v-for="option in hours" v-bind:value="option.value">
-                                {{ option.text }}
+                            <option v-for="option in hours" v-bind:value="option">
+                                {{ option }}
                             </option>
                         </select>
-                    </div>
-                    <div class="col-xs-2 col-sm-1 picker">
                         <select v-model="event.minutes">
                             <option v-for="option in minutes" v-bind:value="option">
                                 {{ option }}
                             </option>
                         </select>    
-                    </div>
-                    <div class="col-xs-2 col-sm-1 picker">
                         <select v-model="event.period">
                             <option v-for="option in periods" v-bind:value="option">
                                 {{ option }}
                             </option>
-                        </select>       
+                        </select>  
                     </div>
-                    <div class="col-xs-8 picker">
+                    <div class="clearfix hidden-sm-up"></div>
+                    <div class="col-xs-12 col-sm-5 picker">
+                        Max Participants
+                        <select v-model="event.maxParticipants">
+                            <option v-for="option in [2, 3, 4, 5, 6, 7, 8]" v-bind:value="option">
+                                {{ option }}
+                            </option>
+                        </select>   
+                    </div>
+                    <div class="col-xs-12 col-sm-5 picker">
+                        Reserved Places
+                        <select v-model="event.reserved">
+                            <option v-for="option in [0, 1, 2, 3, 4, 5, 6, 7]" v-bind:value="option">
+                                {{ option }}
+                            </option>
+                        </select>   
+                    </div>
+                    <div class="clearfix hidden-sm-up"></div>
+                    <div class="col-xs-9 col-sm-10 picker">
                         <button type="button" 
                             class="btn btn-success"
                             v-on:click="create()"
                             v-bind:disabled="event.name.length < 10">Submit</button>
                     </div>
-                    <div class="col-xs-4 picker">
+                    <div class="col-xs-3 col-sm-2 picker">
                         <button type="button" 
                                 v-on:click="newEvent = false"
                                 class="btn btn-danger">Cancel</button>

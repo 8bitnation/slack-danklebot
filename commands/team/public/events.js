@@ -78,7 +78,9 @@ Vue.component('channel-item', {
         hour: datePicker.now.hour,
         channel: this.channel.id,
         minutes: datePicker.now.minutes,
-        period: datePicker.now.period
+        period: datePicker.now.period,
+        maxParticipants: 4,
+        reserved: 0
       },
       dates: datePicker.dates,
       hours: datePicker.hours,
