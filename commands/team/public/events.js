@@ -25,8 +25,12 @@ Vue.component('participant-item', {
       }).then( function(d) {
         that.$root.$data.inProgress = false;
       }).catch(function(err) {
-        that.$root.showError('failed to leave event', err);
         that.$root.$data.inProgress = false;
+        // if it's just a session expire, then don't show an error
+        if(that.$root.hasSessionExpired(err.response)) return;
+        that.$root.showError('failed to leave event', err);
+        
+        
       });
     }
   }
@@ -51,8 +55,10 @@ Vue.component('event-item', {
       }).then( function (d) {
         that.$root.$data.inProgress = false;
       }).catch(function (err) {
-        that.$root.showError('failed to join event', err);
         that.$root.$data.inProgress = false;
+        // if it's just a session expire, then don't show an error
+        if(that.$root.hasSessionExpired(err.response)) return;
+        that.$root.showError('failed to join event', err);
       });
     }
     
@@ -98,8 +104,10 @@ Vue.component('channel-item', {
         that.newEvent = false;
         that.$root.$data.inProgress = false;
       }).catch(function (err) {
-        that.$root.showError('failed to create event', err);
         that.$root.$data.inProgress = false;
+        // if it's just a session expire, then don't show an error
+        if(that.$root.hasSessionExpired(err.response)) return;
+        that.$root.showError('failed to create event', err);
       });
     },
   }
@@ -110,8 +118,10 @@ var app = new Vue({
   computed: {
   },
   data: {
-    validAuth: !!axios.defaults.headers.common['Authorization'],
     inProgress: false,
+    warning: {
+      message: ''
+    },
     error: {
       message: '',
       detail: '',
@@ -174,6 +184,17 @@ var app = new Vue({
         }
       });
     
+    },
+    hasSessionExpired: function(res) {
+      // check if the session has expired after an axios error
+      if(res && res.data && res.data.status === 'session expired') {
+        this.warning.message = 'Session Expired.  Please use /team to create a new one';
+        // we should probably clear the data, just in case
+        this.channels = [];
+        return true;
+      } else {
+        return false;
+      }
     }
   },
   watch: {
@@ -185,13 +206,25 @@ var app = new Vue({
     console.log('created');
     var that = this;
     // only try and download data if we have a cookie
-    if(!this.validAuth) return;
+    if(!axios.defaults.headers.common['Authorization']) {
+      that.warning.message = 'Session Missing.  Please use /team to create a new one';
+      return;
+    }
+
+    this.warning.message = '';
 
     this.inProgress = true;
     this.updateData().then(function (d) {
       that.inProgress = false;
+
+      // did we get any data?
+      if(!that.channels.length) {
+        that.warning.message = 'No Subscribed Channels';
+      }
+
     }).catch(function (err) {
       that.inProgress = false;
+      if(that.hasSessionExpired(err.response)) return;
       that.showError('failed to get event data', err);
     });
   }

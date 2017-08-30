@@ -153,10 +153,10 @@
             v-bind:channel="channel"
             v-bind:key="channel.id">
         </channel-item>
-        <div v-cloak v-show="token.user && !channels.length" class="container-fluid channel">
+        <div v-cloak v-show="warning.message" class="container-fluid channel warning">
             <div class="row">
                 <div class="col-xs-12 channel-title">
-                     No Subscribed Channels
+                    {{ warning.message }}
                 </div>
             </div>
         </div>
@@ -164,13 +164,6 @@
             <div class="row">
                 <div class="col-xs-12 channel-title">
                         Sorry, this app will not work with this browser
-                </div>
-            </div>
-        </div>
-        <div v-cloak v-show="!validAuth" class="container-fluid channel">
-            <div class="row">
-                <div class="col-xs-12 channel-title">
-                    No Auth Found - did you follow the /team link?
                 </div>
             </div>
         </div>
