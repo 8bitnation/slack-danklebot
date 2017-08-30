@@ -232,7 +232,10 @@ router.get('/events', async function(req, res) {
                 value: now.add(d ? 1 : 0, 'd').format('YYYY-MM-DD'),
                 text: now.format('ddd Do MMM YYYY')
             }) ),
-            hours: range(1, 13),
+            hours: range(1, 13).map( (h) => ({
+                value: h % 12,
+                text: h
+            })),
             minutes: range(0, 60, 15).map( (m) => padStart(m, 2, '0'))
         };
         

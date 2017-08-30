@@ -98,8 +98,8 @@
                     </div>
                     <div class="col-xs-2 col-sm-1 picker">
                         <select v-model="event.hour">
-                            <option v-for="option in hours" v-bind:value="option">
-                                {{ option }}
+                            <option v-for="option in hours" v-bind:value="option.value">
+                                {{ option.text }}
                             </option>
                         </select>
                     </div>
