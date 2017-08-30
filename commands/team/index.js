@@ -160,7 +160,7 @@ router.get('/events', async function(req, res) {
         // get a list of subscribed channels for this user
         // generate a list of events filtered by channels
         // db.team.events.find()
-        const users = { 'R' : '* Reserved *'};
+        const users = {};
         const uc = await db.team.users.find();
         while(await uc.hasNext()) {
             var u = await uc.next();
@@ -190,6 +190,12 @@ router.get('/events', async function(req, res) {
 
         });
 
+        const lookupUser = function(u) {
+            if(u[0] === 'R') return '* Reserved *';
+            if(users[u]) return users[u];
+            return 'unknown';
+        }
+
         const events = await db.team.events.find().toArray();
         events.sort((a, b) => a.timestamp - b.timestamp);
         events.forEach((e) => {
@@ -206,12 +212,12 @@ router.get('/events', async function(req, res) {
                     visible: false,
                     participants: e.participants.map( (u) => ({
                         id: u,
-                        name: users[u],
+                        name: lookupUser(u),
                         canLeave: u === token.user,
                     }) ),
                     alternates: e.alternates.map( (u) => ({
                         id: u,
-                        name: users[u],
+                        name: lookupUser(u),
                         canLeave: u === token.user,
                     }) )
                 });
@@ -285,7 +291,7 @@ router.post('/events', async function(req, res) {
                   'YYYY-MM-DDhhmmA', token.tz);
 
         const participants = [ token.user ];
-        for(var i = 0; i < event.reserved; i++) participants.push('R');
+        for(var i = 0; i < event.reserved; i++) participants.push('R'+i);
 
         const newEvent = await db.team.events.insertOne({
             owner: token.user,
@@ -314,7 +320,7 @@ router.post('/events', async function(req, res) {
                     },
                     {
                         "title": "Participants",
-                        "value": `${participants.length}/${maxParticipants}`, // need to show the number of spaces
+                        "value": `${participants.length}/${event.maxParticipants}`,
                         "short": true
                     },
                     {
@@ -415,7 +421,7 @@ router.post('/events/:id/join', async function(req, res) {
                     },
                     {
                         "title": "Participants",
-                        "value": `${event.participants.length}`,
+                        "value": `${event.participants.length}/${event.maxParticipants}`,
                         "short": true
                     },
                     {
@@ -477,7 +483,7 @@ router.get('/events/:id/leave', async function(req, res) {
                     },
                     {
                         "title": "Participants",
-                        "value": `${event.participants.length}`,
+                        "value": `${event.participants.length}/${event.maxParticipants}`,
                         "short": true
                     },
                     {
