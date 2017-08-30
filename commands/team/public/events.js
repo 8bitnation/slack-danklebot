@@ -68,6 +68,26 @@ Vue.component('event-item', {
 Vue.component('channel-item', {
   props: ['channel'],
   template: '#channel-item-template',
+  computed: {
+    // https://stackoverflow.com/a/42134176/3785845
+    mpWatcher: function() {
+      return this.event.maxParticipants;
+    }
+  },
+  watch: {
+    mpWatcher: function() {
+      console.log(this);
+      var maxReserved = this.event.maxParticipants - 2;
+      if(this.event.reserved > maxReserved)
+        this.event.reserved = maxReserved;
+      // rebuild the array
+      var slots = [];
+      for(var i = 0; i <= maxReserved; i++) {
+        slots.push(i);
+      }
+      this.reservedSlots = slots;
+    }
+  },
   data: function() {
     var datePicker = this.$root.$data.datePicker;
     return {
@@ -85,7 +105,8 @@ Vue.component('channel-item', {
       dates: datePicker.dates,
       hours: datePicker.hours,
       minutes: datePicker.minutes,
-      periods: [ 'AM', 'PM' ]
+      periods: [ 'AM', 'PM' ],
+      reservedSlots: [ 0, 1, 2 ]
     }
   },
   methods: {
