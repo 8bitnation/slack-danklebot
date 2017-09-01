@@ -59,7 +59,7 @@ export async function handler(payload) {
         token: token,
         tz: u.user.tz,
         tz_offset: u.user.tz_offset,
-        expire: Date.now() + 900000
+        expire: moment().add(12, 'hours').valueOf()
     });
 
     // check if the insert worked?
@@ -160,13 +160,6 @@ router.get('/events', async function(req, res) {
         // get a list of subscribed channels for this user
         // generate a list of events filtered by channels
         // db.team.events.find()
-        const users = {};
-        const uc = await db.team.users.find();
-        while(await uc.hasNext()) {
-            var u = await uc.next();
-            users[u._id] = u.name;
-        }
-
         const sc = await slack.channels();
         if(!sc.ok) {
             logger.error("unable to get channel details from slack")
@@ -190,13 +183,26 @@ router.get('/events', async function(req, res) {
 
         });
 
+        const events = await db.team.events.find({
+            // show events up to 1 hour after their scheduled time
+            timestamp: {$gt: moment().subtract(1, 'hour').valueOf() }
+        }).toArray();
+
+        // get the users after the channels, just in case someone
+        // joins an event between the two DB operations
+        const users = {};
+        const uc = await db.team.users.find();
+        while(await uc.hasNext()) {
+            var u = await uc.next();
+            users[u._id] = u.name;
+        }
+
         const lookupUser = function(u) {
             if(u[0] === 'R') return '* Reserved *';
             if(users[u]) return users[u];
             return 'unknown';
         }
 
-        const events = await db.team.events.find().toArray();
         events.sort((a, b) => a.timestamp - b.timestamp);
         events.forEach((e) => {
 
@@ -404,46 +410,50 @@ router.post('/events/:id/join', async function(req, res) {
             }
         },{ returnOriginal: false });
 
-        if(update.ok) {
+        // join silently fails if the event has already been deleted
+        res.json({ status: 'ok', result: update.lastErrorObject});
 
-            res.json({ status: 'ok', result: update.lastErrorObject});
-            const event = update.value;
-            const timestamp = moment(event.timestamp);
-            const fallbackTime = timestamp.utc().format('llll') + " UTC";
-            // send back a message to the channel
-            const attachment = {
-                "fallback": `${token.name} has joined ${event.name}`,
-                "color": "#36a64f",
-                "title": `<@${token.user}> has joined ${event.name}`,
-                "fields": [
-                    {
-                        "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
-                    },
-                    {
-                        "title": "Participants",
-                        "value": `${event.participants.length}/${event.maxParticipants}`,
-                        "short": true
-                    },
-                    {
-                        "title": "Alternates",
-                        "value": `${event.alternates.length}`,
-                        "short": true
-                    }
-                ]
-            };
-            const post = await slack.postMessage(update.value.channel, undefined,
-                { as_user: true,
-                    attachments: [
-                        attachment
-                    ]
-                }
-            );
-            logger.debug(post);
-            return;
-        } else {
-            logger.error('user: %s [%s], failed to join %s', token.name, token.user, event_id.valueOf());
-            return res.status(500).json({ status: 'failed to join event', result: update.lastErrorObject });
+        if(!update.ok) {
+            logger.error('user: %s [%s], failed to join %s, update: ', token.name, token.user, event_id.valueOf(), update);
+            return;            
         }
+
+        if(!update.value) return; // don't send a message to slack if the event went away
+
+        const event = update.value;
+        const timestamp = moment(event.timestamp);
+        const fallbackTime = timestamp.utc().format('llll') + " UTC";
+        // send back a message to the channel
+        const attachment = {
+            "fallback": `${token.name} has joined ${event.name}`,
+            "color": "#36a64f",
+            "title": `<@${token.user}> has joined ${event.name}`,
+            "fields": [
+                {
+                    "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                },
+                {
+                    "title": "Participants",
+                    "value": `${event.participants.length}/${event.maxParticipants}`,
+                    "short": true
+                },
+                {
+                    "title": "Alternates",
+                    "value": `${event.alternates.length}`,
+                    "short": true
+                }
+            ]
+        };
+        const post = await slack.postMessage(update.value.channel, undefined,
+            { as_user: true,
+                attachments: [
+                    attachment
+                ]
+            }
+        );
+        logger.debug(post);
+        return;
+
 
     } catch(err) {
         logger.error(err);
@@ -458,54 +468,102 @@ router.get('/events/:id/leave', async function(req, res) {
         const token = req.token;
 
         const event_id = new ObjectID(req.params.id);
-        logger.debug('user: %s [%s], is leaving %s', token.name, token.user, event_id.valueOf());
+        logger.debug('user: %s [%s] is leaving %s', token.name, token.user, event_id.valueOf());
 
         // brute force leave
-        const update = await db.team.events.findOneAndUpdate({_id: event_id}, {
+        var update = await db.team.events.findOneAndUpdate({_id: event_id}, {
             $pull: { participants: token.user, alternates: token.user }
         },
         { returnOriginal: false });
 
-        if(update.ok) {
+        // leave silently fails if the event has already been deleted
+        // i.e. we are an alt
+        res.json({ status: 'ok', result: update.lastErrorObject});
 
-            res.json({ status: 'ok', result: update.lastErrorObject });
-            const event = update.value;
-            const timestamp = moment(event.timestamp);
-            const fallbackTime = timestamp.utc().format('llll') + " UTC";
-            // send back a message to the channel
-            const attachment = {
-                "fallback": `${token.name} has left ${event.name}`,
-                "color": "#36a64f",
-                "title": `<@${token.user}> has left ${event.name}`,
-                "fields": [
-                    {
-                        "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
-                    },
-                    {
-                        "title": "Participants",
-                        "value": `${event.participants.length}/${event.maxParticipants}`,
-                        "short": true
-                    },
-                    {
-                        "title": "Alternates",
-                        "value": `${event.alternates.length}`,
-                        "short": true
-                    }
-                ]
-            };
-            const post = await slack.postMessage(update.value.channel, undefined,
-                { as_user: true,
-                    attachments: [
-                        attachment
-                    ]
+        if(!update.ok) {
+            logger.debug('user: %s [%s], failed to leave %s', token.name, token.user, event_id.valueOf());
+            return;            
+        }
+
+        if(!update.value) return; // no event to say we left, give up silently
+
+
+        var deleteEvent = false;
+        var ownerLeft = false;
+        const event = update.value;
+
+        // check if we are the last real person
+        const nextParticipant = event.participants.find(function(p) {
+            return (p[0] !== 'R');
+        });
+
+        if(!nextParticipant) {
+            // remove the event
+            // it's possible to get here if we are leaving and the 
+            // owner has just left, so technically we are about to
+            // become the new owner if not already
+            update = await db.team.events.findOneAndDelete({_id: event_id});
+            deleteEvent = update.ok; 
+            logger.debug('user: %s [%s] deleted %s', token.name, token.user, event_id.valueOf());
+        }
+
+        // were we the owner?
+        if(token.user === event.owner) {
+            ownerLeft = true;
+
+            if(nextParticipant) {
+                // pass ownership on to the next person
+                update = await db.team.events.findOneAndUpdate({_id: event_id}, {
+                    $set: {owner: nextParticipant}
+                }, { returnOriginal: false });
+                // we could be trying to set owner to someone who already
+                // left and removed the event, so we don't check if we found and updated
+                logger.debug('user: %s [%s], passed on ownership to %s for %s', 
+                        token.name, token.user, nextParticipant, event_id.valueOf());
+            }
+        }
+        
+        const timestamp = moment(event.timestamp);
+        const fallbackTime = timestamp.utc().format('llll') + " UTC";
+        // send back a message to the channel
+        const action = deleteEvent ? 'removed' : 'left';
+        const attachment = {
+            "fallback": `${token.name} has ${action} ${event.name}`,
+            "color": "#ff4500", //OrangeRed
+            "title": `<@${token.user}> has ${action} ${event.name}`,
+            "fields": [
+                {
+                    "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
                 }
-            );
-            logger.debug(post);
-            return;
-        } else {
-            logger.debug('user: %s [%s], failed to leave %s', token.name, token.user, event_id.valueOf());            
-            return res.status(500).json({ status: 'failed to leave event', result: update.lastErrorObject });
-        }        
+            ]
+        };
+
+        if(!deleteEvent) {
+            if(ownerLeft) {
+                attachment.text = `<@${nextParticipant}> is now owner`;
+            }
+            attachment.color = "#ffa500"; // Orange
+            attachment.fields.push({
+                "title": "Participants",
+                "value": `${event.participants.length}/${event.maxParticipants}`,
+                "short": true
+            });
+            attachment.fields.push({
+                "title": "Alternates",
+                "value": `${event.alternates.length}`,
+                "short": true
+            });
+        };
+
+        const post = await slack.postMessage(update.value.channel, undefined,
+            { as_user: true,
+                attachments: [
+                    attachment
+                ]
+            }
+        );
+        logger.debug(post);
+        return;     
 
     } catch(err) {
         logger.error(err);
@@ -521,3 +579,27 @@ router.delete('/events/:id', async function(req, res) {
 
 //serve up static files
 router.use('/', express.static(path.join(__dirname, 'public')));
+
+
+// schedule hourly cleanup
+setInterval(async function() {
+    const re = await db.team.events.deleteMany({
+        // remove events 2 days old
+        timestamp: { $lt: moment().subtract(2, 'days').valueOf() }
+    });
+    if(!re.result.ok) {
+        logger.error('failed to clear events: ', re);
+    } else {
+        logger.info('removed %d events', re.deletedCount);
+    }
+
+    const rt = await db.team.tokens.deleteMany({
+        expire: { $lt: moment().valueOf() }
+    });
+    if(!rt.result.ok) {
+        logger.error('failed to clear tokens: ', rt);
+    } else {
+        logger.info('removed %d tokens', rt.deletedCount);
+    }
+
+}, 1000 * 60 * 60);
