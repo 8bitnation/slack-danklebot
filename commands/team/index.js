@@ -322,7 +322,7 @@ router.post('/events', async function(req, res) {
                 "title": `<@${token.user}> has created ${event.name}`,
                 "fields": [
                     {
-                        "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                        "value": `<!date^${timestamp.unix()}^{date_long_pretty} {time}|${fallbackTime}>`
                     },
                     {
                         "title": "Participants",
@@ -430,7 +430,7 @@ router.post('/events/:id/join', async function(req, res) {
             "title": `<@${token.user}> has joined ${event.name}`,
             "fields": [
                 {
-                    "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                    "value": `<!date^${timestamp.unix()}^{date_long_pretty} {time}|${fallbackTime}>`
                 },
                 {
                     "title": "Participants",
@@ -533,7 +533,7 @@ router.get('/events/:id/leave', async function(req, res) {
             "title": `<@${token.user}> has ${action} ${event.name}`,
             "fields": [
                 {
-                    "value": `<!date^${timestamp.unix()}^{date_short_pretty} {time}|${fallbackTime}>`
+                    "value": `<!date^${timestamp.unix()}^{date_long_pretty} {time}|${fallbackTime}>`
                 }
             ]
         };

@@ -4,7 +4,6 @@
 
 body {
   font-family: monospace;
-
 }
 
 option {
@@ -33,6 +32,7 @@ option {
   border-radius: 5px;
   padding: 10px;
   margin: 2px;
+  cursor: pointer;
 }
 
 .channel-title {
@@ -55,6 +55,7 @@ option {
   font-size: 20px;
   color: white;
   margin-bottom: 3px;
+  cursor: pointer;
 }
 
 .event-name {
@@ -95,6 +96,7 @@ option {
   padding: 8px;
   margin-top: 4px;
   overflow: auto;
+  cursor: pointer;
 }
 
 .leave {
@@ -120,6 +122,7 @@ option {
 .error-message {
   font-size: 20px;
   text-align: center;
+  cursor: pointer;
 }
 
 .error-detail {
