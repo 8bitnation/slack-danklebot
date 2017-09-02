@@ -28,13 +28,13 @@ You can create new events by selecting the `create new event` item at the bottom
 
 ## events
 
-Selecting an event will expand or collapse it, showing or hiding the names of any participants or alternates.  The numbers in square braces are in the following format:
+Selecting an event will expand or collapse it, showing or hiding the names of any participants or alternates.  The numbers in square brackets are in the following format:
 
 `[ participants/max +alternates ]`
 
 If you have not already joined an event, you should see an item at the bottom of the participants and alternates list that says `[ join ]`.  Select either one to join as a participant or an alternate.
 
-If you have already joined the event, you should see `[ x ]` to the right of you name.  Select this to leave the event.
+If you have already joined the event, you should see `[ x ]` to the right of your name.  Select this to leave the event.
 
 When the owner of an event leaves, ownership will be passed on to the next participant who joined the event.  If there are no other participants, then the event will be removed.  **Note:** this does not include alternates or reserved.
 
