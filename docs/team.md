@@ -20,7 +20,7 @@ Upon opening the web service you will be presented with a list of channels from 
 
 ## channels
 
-Selecting a channel will expand or collapse it, showing or hiding any scheduled events.
+Selecting a channel will expand or collapse it, showing or hiding any scheduled events.  The number to the right of the channel name indicates the number of scheduled events in the channel.
 
 If you issued the `/team` command in one of the channels associated with the bot above, when you first visit the bot service or refresh the page, that channel should already be expanded showing any scheduled events for the channel.
 
@@ -28,7 +28,9 @@ You can create new events by selecting the `create new event` item at the bottom
 
 ## events
 
-Selecting an event will expand or collapse it, showing or hiding the names of any participants or alternates.
+Selecting an event will expand or collapse it, showing or hiding the names of any participants or alternates.  The numbers in square braces are in the following format:
+
+`[ participants/max +alternates ]`
 
 If you have not already joined an event, you should see an item at the bottom of the participants and alternates list that says `[ join ]`.  Select either one to join as a participant or an alternate.
 
