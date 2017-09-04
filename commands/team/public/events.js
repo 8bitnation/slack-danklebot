@@ -27,7 +27,7 @@ Vue.component('participant-item', {
       }).catch(function(err) {
         that.$root.$data.inProgress = false;
         // if it's just a session expire, then don't show an error
-        if(that.$root.hasSessionExpired(err.response)) return;
+        if(that.$root.showSessionWarning(err.response)) return;
         that.$root.showError('failed to leave event', err);
         
         
@@ -57,7 +57,7 @@ Vue.component('event-item', {
       }).catch(function (err) {
         that.$root.$data.inProgress = false;
         // if it's just a session expire, then don't show an error
-        if(that.$root.hasSessionExpired(err.response)) return;
+        if(that.$root.showSessionWarning(err.response)) return;
         that.$root.showError('failed to join event', err);
       });
     }
@@ -129,7 +129,7 @@ Vue.component('channel-item', {
       }).catch(function (err) {
         that.$root.$data.inProgress = false;
         // if it's just a session expire, then don't show an error
-        if(that.$root.hasSessionExpired(err.response)) return;
+        if(that.$root.showSessionWarning(err.response)) return;
         that.$root.showError('failed to create event', err);
       });
     },
@@ -208,16 +208,24 @@ var app = new Vue({
       });
     
     },
-    hasSessionExpired: function(res) {
-      // check if the session has expired after an axios error
-      if(res && res.data && res.data.status === 'session expired') {
+    showSessionWarning: function(res) {
+      // check if the session has expired or TZ is not set after an axios error
+      if(!res || !res.data) return false;
+
+      if(res.data.status === 'session expired') {
         this.warning.message = 'Session Expired.  Please use /team to create a new one';
         // we should probably clear the data, just in case
         this.channels = [];
         return true;
-      } else {
-        return false;
+      } 
+
+      if(res.data.status === 'tz missing') {
+        this.warning.message = 'Please configure your TimeZone in slack';
+        this.channels = [];
+        this.warning.url = 'https://8bitnation.slack.com/account/settings';
+        return true; 
       }
+      return false;
     }
   },
   watch: {
@@ -247,7 +255,7 @@ var app = new Vue({
 
     }).catch(function (err) {
       that.inProgress = false;
-      if(that.hasSessionExpired(err.response)) return;
+      if(that.showSessionWarning(err.response)) return;
       that.showError('failed to get event data', err);
     });
   }

@@ -170,7 +170,10 @@
         <div v-cloak v-show="warning.message" class="container-fluid channel warning">
             <div class="row">
                 <div class="col-xs-12 channel-title">
+                    <a v-if="warning.url" v-bind:href="warning.url" class="warning">
                     {{ warning.message }}
+                    </a>
+                    <p v-else>{{ warning.message }}<p>
                 </div>
             </div>
         </div>

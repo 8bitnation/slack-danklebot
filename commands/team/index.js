@@ -103,11 +103,8 @@ router.get('/auth/:token', async function(req, res) {
         logger.debug('%s %s: looking up token: %s', req.method, req.url, req.params.token);
         const token = await db.team.tokens.findOne({token : req.params.token});
 
-        
-        if(!token || token.expire < Date.now()) {
-            // don't expire tokens for now
-            //return res.status(410).send('Token Expired');
-        }
+        // if the token has expired or does not exist, simply pass nothing
+        // onto the next stage and let the UI handle it
 
         res.cookie(COOKIE_NAME, req.params.token, { path: '/team' });
         return res.redirect('..');
@@ -139,6 +136,12 @@ router.use('/events', async function(req, res, next){
             logger.debug('%s %s: failed to find token for: %s', req.method, req.url, auth);
             return res.status(403).json({ status: 'session expired' });
         }
+
+        if(!token.tz) {
+            logger.debug('%s %s: failed to find TZ for %s', req.method, req.url, auth);
+            return res.status(403).json({ status: 'tz missing'});
+        }
+
         req.token = token;
         next();
     } catch(err) {
