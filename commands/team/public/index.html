@@ -2,6 +2,11 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/ico/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/ico/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/ico/favicon-16x16.png">
+    <link rel="shortcut icon" href="/assets/ico/favicon.ico">
+    
     <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=Promise"></script>
     <script src="https://unpkg.com/vue@2.4.2/dist/vue.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -160,7 +165,7 @@
             <p class="error-message">{{ error.message }}</p>
             <pre class="error-detail" v-show="error.detailVisible">{{ error.detail }}</pre>
         </div>
-        <div class="title">8bn Events</div>
+        <div class="title">8bN Events</div>
         <div v-bind:class="{ 'loading': inProgress }"></div>
         <channel-item
             v-for="channel in channels"
