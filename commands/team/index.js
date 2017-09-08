@@ -35,6 +35,16 @@ export async function handler(payload) {
         });
     }
 
+    // check we have a timezone set
+
+    if(!u.user.tz) {
+        logger.error('failed to get tz for: %s [%s]', payload.user_name, payload.user_id);
+        return({
+            "response_type": "ephemeral",
+            text: `Oops, we were not able to determine which TimeZone you are in.  Can you go to https://8bitnation.slack.com/account/settings and check it's set correctly?`
+        });
+    }
+
     logger.debug('creating token for %s [%s]', u.user.name, u.user.id);
 
     // update/insert the user
