@@ -99,6 +99,8 @@ Vue.component('channel-item', {
         channel: this.channel.id,
         minutes: datePicker.now.minutes,
         period: datePicker.now.period,
+        tz: datePicker.now.tz,
+        tzWarning: datePicker.now.tzWarning,
         maxParticipants: 4,
         reserved: 0
       },
@@ -219,12 +221,7 @@ var app = new Vue({
         return true;
       } 
 
-      if(res.data.status === 'tz missing') {
-        this.warning.message = 'Please configure your TimeZone in slack';
-        this.channels = [];
-        this.warning.url = 'https://8bitnation.slack.com/account/settings';
-        return true; 
-      }
+
       return false;
     }
   },
@@ -251,6 +248,12 @@ var app = new Vue({
       // did we get any data?
       if(!that.channels.length) {
         that.warning.message = 'No Subscribed Channels';
+      }
+      if(that.token.tz == null) {
+        that.warning.message = 'Please configure your TimeZone in slack';
+        //this.channels = [];
+        that.warning.url = 'https://8bitnation.slack.com/account/settings#timezone';
+        return true; 
       }
 
     }).catch(function (err) {

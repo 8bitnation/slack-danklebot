@@ -67,6 +67,10 @@ option {
   font-size: 18px;
 }
 
+.tz-warning {
+  color: darkorange;
+}
+
 .picker {
   margin-top: 10px;
 }

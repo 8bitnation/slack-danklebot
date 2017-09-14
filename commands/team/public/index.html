@@ -31,7 +31,9 @@
             <div class="col-xs-3 col-sm-2 event-count">
                 [{{ event.participants.length }}/{{event.maxParticipants}}&nbsp;+{{ event.alternates.length }}]
             </div>
-            <div class="col-xs-9 col-sm-4 event-date">{{ event.date }}</div>
+            <div class="col-xs-9 col-sm-4 event-date">
+                <span>{{ event.date }}</span> <span v-bind:class="{ 'tz-warning': event.tzWarning }">{{ event.tz }}</span>
+            </div>
         </div>
         <div class="row" v-if="event.visible">
             <div class="col-xs-12 col-sm-6 participant-list">
@@ -117,6 +119,7 @@
                                 {{ option }}
                             </option>
                         </select>  
+                        <span v-bind:class="{ 'tz-warning': event.tzWarning }">{{ event.tz }}</span>
                     </div>
                     <div class="clearfix hidden-sm-up"></div>
                     <div class="col-xs-12 col-sm-5 picker">
@@ -167,11 +170,6 @@
         </div>
         <div class="title">8bN Events</div>
         <div v-bind:class="{ 'loading': inProgress }"></div>
-        <channel-item
-            v-for="channel in channels"
-            v-bind:channel="channel"
-            v-bind:key="channel.id">
-        </channel-item>
         <div v-cloak v-show="warning.message" class="container-fluid channel warning">
             <div class="row">
                 <div class="col-xs-12 channel-title">
@@ -182,6 +180,12 @@
                 </div>
             </div>
         </div>
+        <channel-item
+            v-for="channel in channels"
+            v-bind:channel="channel"
+            v-bind:key="channel.id">
+        </channel-item>
+
         <div style="display:none" id="detect" class="container-fluid channel">
             <div class="row">
                 <div class="col-xs-12 channel-title">

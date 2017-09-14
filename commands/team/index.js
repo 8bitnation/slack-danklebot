@@ -37,13 +37,13 @@ export async function handler(payload) {
 
     // check we have a timezone set
 
-    if(!u.user.tz) {
-        logger.error('failed to get tz for: %s [%s]', payload.user_name, payload.user_id);
-        return({
-            "response_type": "ephemeral",
-            text: `Oops, we were not able to determine which TimeZone you are in.  Can you go to https://8bitnation.slack.com/account/settings and check it's set correctly?`
-        });
-    }
+    //if(!u.user.tz) {
+    //    logger.error('failed to get tz for: %s [%s]', payload.user_name, payload.user_id);
+    //    return({
+    //        "response_type": "ephemeral",
+    //        text: `Oops, we were not able to determine which TimeZone you are in.  Can you go to https://8bitnation.slack.com/account/settings and check it's set correctly?`
+    //    });
+    //}
 
     logger.debug('creating token for %s [%s]', u.user.name, u.user.id);
 
@@ -67,6 +67,7 @@ export async function handler(payload) {
         name: u.user.name,
         channel: payload.channel_id,
         token: token,
+        // we can probably remove these now
         tz: u.user.tz,
         tz_offset: u.user.tz_offset,
         expire: moment().add(12, 'hours').valueOf()
@@ -147,10 +148,16 @@ router.use('/events', async function(req, res, next){
             return res.status(403).json({ status: 'session expired' });
         }
 
-        if(!token.tz) {
-            logger.debug('%s %s: failed to find TZ for %s', req.method, req.url, auth);
-            return res.status(403).json({ status: 'tz missing'});
+        // see if the timezone has been changed since we issued the token
+        const u = await slack.userInfo(token.user);
+        if(u.ok && u.user.tz) {
+            token.tz = u.user.tz;
         }
+
+        //if(!token.tz) {
+        //    logger.debug('%s %s: failed to find TZ for %s', req.method, req.url, auth);
+        //    return res.status(403).json({ status: 'tz missing'});
+        //}
 
         req.token = token;
         next();
@@ -219,13 +226,17 @@ router.get('/events', async function(req, res) {
         events.sort((a, b) => a.timestamp - b.timestamp);
         events.forEach((e) => {
 
+            const eventTime = moment(e.timestamp).tz(token.tz || 'UTC');
+
             // add event to the channel
             if(channels[e.channel]) {
                 channels[e.channel].events.push({
                     id: e._id,
                     name: e.name,
                     maxParticipants: e.maxParticipants,
-                    date: moment(e.timestamp).tz(token.tz).format('llll'),
+                    date: eventTime.format('ddd, MMM Do, hh:mm A'),
+                    tz: eventTime.format('z'),
+                    tzWarning: token.tz == null,
                     canJoin: !e.alternates.concat(e.participants).
                             includes(token.user),
                     visible: false,
@@ -243,14 +254,16 @@ router.get('/events', async function(req, res) {
             }
         });
 
-        const now = moment().tz(token.tz);
+        const now = moment().tz(token.tz || 'UTC');
         const datePicker = {
             
             now: {
                 // get the closest 15 min period
                 minutes: padStart((parseInt(now.minutes()/15, 10) * 15) % 60, 2, '0'),
                 hour: now.hour() % 12 ? now.hour() % 12 : 12,
-                period: now.format('A')
+                period: now.format('A'),
+                tz: now.format('z'),
+                tzWarning: token.tz == null
             },
             // determine the next 14 days from today in the locale
             // of the user
@@ -266,7 +279,8 @@ router.get('/events', async function(req, res) {
             'status': 'ok',
             token: { 
                 channel: token.channel, 
-                user: token.user  
+                user: token.user,
+                tz: token.tz 
             },
             datePicker: datePicker,
             //users: users,
