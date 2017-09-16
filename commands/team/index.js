@@ -299,6 +299,56 @@ router.get('/events', async function(req, res) {
 
 });
 
+async function updateMessage(event, attachment) {
+
+    // post the new message first
+    const post = await slack.postMessage(event.channel, undefined,
+        { as_user: true,
+            attachments: [
+                attachment
+            ]
+        }
+    );
+
+    logger.debug(post);
+
+    if(post.ok) {
+
+        
+        if(event.msg_ts) {
+            // delete the old one - if there was one
+            try {
+                const del = await slack.deleteMessage(event.msg_ts, event.channel);
+                logger.debug(del);
+            } catch (err) {
+                logger.error(err);
+            }
+
+        }
+
+        // save the new one
+        const update = await db.team.events.findOneAndUpdate({_id: event._id}, {
+            $set: { msg_ts: post.ts }
+        });
+
+        logger.debug(update);
+    }
+
+
+}
+
+async function buildUserList(users) {
+    const r = [];
+    for(let i = 0; i < users.length; i++) {
+        let u = await db.team.users.findOne({ _id: users[i]})
+        if(u) {
+            r.push(u.name);
+        }
+    }
+    return r;
+}
+
+
 // create a new event
 router.post('/events', async function(req, res) {
 
@@ -338,6 +388,9 @@ router.post('/events', async function(req, res) {
 
         if(newEvent.result.ok) {
 
+            // we need the id so that we can update the msg_ts
+            event._id = newEvent.insertedId;
+
             res.json({ status: 'ok', result: newEvent.result, id : newEvent.insertedId});
             //const event = newEvent.value;
             //const timestamp = moment(event.timestamp);
@@ -352,8 +405,8 @@ router.post('/events', async function(req, res) {
                         "value": `<!date^${timestamp.unix()}^{date_long_pretty} {time}|${fallbackTime}>`
                     },
                     {
-                        "title": "Participants",
-                        "value": `${participants.length}/${event.maxParticipants}`,
+                        "title": `Participants ${participants.length}/${event.maxParticipants}`,
+                        "value": `${token.name}`,
                         "short": true
                     },
                     {
@@ -363,15 +416,7 @@ router.post('/events', async function(req, res) {
                     }
                 ]
             };
-            const post = await slack.postMessage(event.channel, undefined,
-                { as_user: true,
-                    attachments: [
-                        attachment
-                    ]
-                }
-            );
-            logger.debug(post);
-            return;
+            return await updateMessage(event, attachment);
         } else {
             logger.error('user: %s [%s], failed to create %s', token.name, token.user, event.name);
             return res.status(500).json({ status: 'failed to create event', result: newEvent.result });
@@ -460,27 +505,19 @@ router.post('/events/:id/join', async function(req, res) {
                     "value": `<!date^${timestamp.unix()}^{date_long_pretty} {time}|${fallbackTime}>`
                 },
                 {
-                    "title": "Participants",
-                    "value": `${event.participants.length}/${event.maxParticipants}`,
+                    "title": `Participants: ${event.participants.length}/${event.maxParticipants}`,
+                    "value": (await buildUserList(event.participants)).join("\n"),
                     "short": true
                 },
                 {
-                    "title": "Alternates",
-                    "value": `${event.alternates.length}`,
+                    "title": `Alternates: ${event.alternates.length}`,
+                    "value": (await buildUserList(event.alternates)).join("\n"),
                     "short": true
                 }
             ]
         };
-        const post = await slack.postMessage(update.value.channel, undefined,
-            { as_user: true,
-                attachments: [
-                    attachment
-                ]
-            }
-        );
-        logger.debug(post);
-        return;
 
+        return await updateMessage(event, attachment);
 
     } catch(err) {
         logger.error(err);
@@ -571,26 +608,18 @@ router.get('/events/:id/leave', async function(req, res) {
             }
             attachment.color = "#ffa500"; // Orange
             attachment.fields.push({
-                "title": "Participants",
-                "value": `${event.participants.length}/${event.maxParticipants}`,
+                "title": `Participants: ${event.participants.length}/${event.maxParticipants}`,
+                "value": (await buildUserList(event.participants)).join("\n"),
                 "short": true
             });
             attachment.fields.push({
-                "title": "Alternates",
-                "value": `${event.alternates.length}`,
+                "title": `Alternates: ${event.alternates.length}`,
+                "value": (await buildUserList(event.alternates)).join("\n"),
                 "short": true
             });
         };
 
-        const post = await slack.postMessage(update.value.channel, undefined,
-            { as_user: true,
-                attachments: [
-                    attachment
-                ]
-            }
-        );
-        logger.debug(post);
-        return;     
+        return await updateMessage(update.value, attachment);  
 
     } catch(err) {
         logger.error(err);
