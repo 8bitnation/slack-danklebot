@@ -45,12 +45,13 @@ export async function handler(payload) {
     //    });
     //}
 
-    logger.debug('creating token for %s [%s]', u.user.name, u.user.id);
+    const username = u.user.profile.display_name || u.user.name;
+    logger.debug('creating token for %s [%s]', username, u.user.id);
 
     // update/insert the user
     const userUpdate = await db.team.users.updateOne(
         { _id: u.user.id }, 
-        {$set: {name: u.user.name}},
+        {$set: { name: username } },
         {upsert:true}
     );
 
@@ -64,7 +65,7 @@ export async function handler(payload) {
 
     const insert = await db.team.tokens.insertOne({
         user: payload.user_id,
-        name: u.user.name,
+        name: username,
         channel: payload.channel_id,
         token: token,
         // we can probably remove these now
@@ -340,10 +341,15 @@ async function updateMessage(event, attachment) {
 async function buildUserList(users) {
     const r = [];
     for(let i = 0; i < users.length; i++) {
-        let u = await db.team.users.findOne({ _id: users[i]})
-        if(u) {
-            r.push(u.name);
+        if(users[i][0] === 'R') {
+            r.push('* Reserved *');
+        } else {
+            let u = await db.team.users.findOne({ _id: users[i]})
+            if(u) {
+                r.push(u.name);
+            }
         }
+
     }
     return r;
 }
