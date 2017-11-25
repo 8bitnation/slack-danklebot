@@ -190,7 +190,7 @@ router.get('/events', async function(req, res) {
         
         const channels = {};
         sc.channels.forEach((c) => {
-            if(config.teamChannels.includes(c.name) 
+            if(c.topic.value.includes('/team') 
                 && c.members.length 
                 && c.members.includes(token.user)) {
 
