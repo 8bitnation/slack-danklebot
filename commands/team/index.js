@@ -187,22 +187,31 @@ router.get('/events', async function(req, res) {
             return res.status(500).json({ status: 'failed to get channel details from slack' });
         }
         logger.debug('found %d slack channels', sc.channels.length);
-        
+
+        const managedChannels = sc.channels.filter( c => c.topic.value.includes('/team') && c.num_members );
+        logger.debug('found %d managed channels', managedChannels.length);
         const channels = {};
-        sc.channels.forEach((c) => {
-            if(c.topic.value.includes('/team') 
-                && c.members.length 
-                && c.members.includes(token.user)) {
+        await Promise.all(
+            managedChannels.map( async function(c) {
+                const sm = await slack.members(c.id);
+                if(!sm.ok) {
+                    // this is a problem - we cannot fail gracefully as we are
+                    // doing multiple membership checks concurrently
+                    throw new Error('unable to get members for channel: '+ c.name);
+                }
+                
+                if(sm.members.includes(token.user)) {
+                    logger.debug('found subscribed channel [%s] for [%s]', c.name, token.name);
+                    channels[c.id] = { 
+                        visible: c.id === token.channel, 
+                        id: c.id, 
+                        name: c.name, 
+                        events: []
+                    };
+                }
 
-                channels[c.id] = { 
-                    visible: c.id === token.channel, 
-                    id: c.id, 
-                    name: c.name, 
-                    events: []
-                };
-            }
-
-        });
+            })
+        );
 
         const events = await db.team.events.find({
             // show events up to 1 hour after their scheduled time
